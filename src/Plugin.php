@@ -49,9 +49,11 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiViews;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
-use AffibloomLassoMigrator\Infrastructure\WordPress\ContentChangeWriter;
-use AffibloomLassoMigrator\Infrastructure\WordPress\ContentHosts;
+use AffibloomLassoMigrator\Infrastructure\WordPress\ElementorTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionConversionLock;
+use AffibloomLassoMigrator\Infrastructure\WordPress\PostTexts;
+use AffibloomLassoMigrator\Infrastructure\WordPress\WidgetTexts;
+use AffibloomLassoMigrator\Infrastructure\WordPress\WpAttributeParser;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
 use AffibloomLassoMigrator\Interface\Rest\MigrationController;
@@ -155,7 +157,10 @@ final class Plugin {
 		$source = new WpLassoSource();
 		$maps   = new MigrationMaps( new LassoIdMap(), new OptionMigrationLog( $this->lasso->version() ), $source, new ApiGroups( $api ) );
 
-		return new ContentConverter( new ContentHosts( $source->settings()->list( 'cpt_support' ) ), new ApiBlocks( $api ), $maps->read( ... ), new ContentChangeWriter(), new OptionConversionLock() );
+		// Posts, widgets and Elementor's data (Tasks LM3, LM4).
+		$stores = array( new PostTexts( $source->settings()->list( 'cpt_support' ) ), new WidgetTexts(), new ElementorTexts() );
+
+		return new ContentConverter( $stores, new ApiBlocks( $api ), $maps->read( ... ), new WpAttributeParser(), new OptionConversionLock() );
 	}
 
 	/**

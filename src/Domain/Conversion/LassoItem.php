@@ -24,6 +24,9 @@ final class LassoItem {
 	/** A `[lasso-attr …]`. */
 	public const ATTR = 'lasso-attr';
 
+	/** WordPress's Shortcode block holding one `[lasso …]` and nothing else; it converts as Lasso's block (Task LM4). */
+	public const SHORTCODE_BLOCK = 'shortcode-block';
+
 	/**
 	 * Builds the item.
 	 *

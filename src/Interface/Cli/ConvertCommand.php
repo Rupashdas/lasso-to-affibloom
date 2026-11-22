@@ -11,21 +11,22 @@ namespace AffibloomLassoMigrator\Interface\Cli;
 
 use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
 use AffibloomLassoMigrator\Application\Conversion\ConversionLocked;
-use AffibloomLassoMigrator\Domain\Conversion\ContentWriter;
 use AffibloomLassoMigrator\Domain\Conversion\ConversionLine;
+use AffibloomLassoMigrator\Domain\Conversion\TextStore;
 use WP_CLI;
 use WP_CLI\Utils;
 
 /**
  * `wp affibloom-lasso convert [--dry-run] [--post=<id>] [--revert [--force]] [--format=<format>]` (F10 AC3, AC25, D16,
- * D17; Tasks LM2, LM3): every Lasso block, `[lasso …]` and `[lasso-attr …]` in the site's content with what it becomes,
+ * D17; Tasks LM2-LM4): every Lasso block, `[lasso …]` and `[lasso-attr …]` in the site's content with what it becomes,
  * or why it stays, and a summary. With --dry-run nothing is written; without it Lasso's convertible blocks are written
- * as Affibloom's (bare shortcodes are LM4's). --revert puts converted posts back exactly.
+ * as Affibloom's, bare shortcodes too, in posts, widgets and Elementor's data (LM4). --revert puts converted places back
+ * exactly.
  */
 final class ConvertCommand {
 
 	/** The report's columns. */
-	private const FIELDS = array( 'post', 'status', 'item', 'lasso', 'action', 'becomes' );
+	private const FIELDS = array( 'post', 'place', 'status', 'item', 'lasso', 'action', 'becomes' );
 
 	/**
 	 * Builds the command.
@@ -116,29 +117,29 @@ final class ConvertCommand {
 	}
 
 	/**
-	 * Puts converted posts back and says how each went.
+	 * Puts converted places back and says how each went.
 	 *
-	 * @param int  $post  One post; 0 for every converted post.
-	 * @param bool $force Also posts edited after their conversion.
+	 * @param int  $post  One post's places; 0 for every converted place.
+	 * @param bool $force Also places changed after their conversion.
 	 */
 	private function revert( int $post, bool $force ): void {
 		$results = $this->converter->revert( $post, $force );
 		$counts  = array_count_values( $results );
 		foreach ( $results as $one => $result ) {
-			if ( ContentWriter::EDITED === $result ) {
-				WP_CLI::warning( "Post $one was edited after its conversion: kept (--force reverts it)." );
-			} elseif ( ContentWriter::FAILED === $result ) {
-				WP_CLI::warning( "Post $one could not be put back exactly: it keeps its copy." );
+			if ( TextStore::EDITED === $result ) {
+				WP_CLI::warning( ucfirst( $one ) . ' was changed after its conversion: kept (--force reverts it).' );
+			} elseif ( TextStore::FAILED === $result ) {
+				WP_CLI::warning( ucfirst( $one ) . ' could not be put back exactly: it keeps its copy.' );
 			}
 		}
 		$line = sprintf(
 			'%d reverted, %d edited since (kept), %d with nothing to revert, %d failed.',
-			$counts[ ContentWriter::REVERTED ] ?? 0,
-			$counts[ ContentWriter::EDITED ] ?? 0,
-			$counts[ ContentWriter::NONE ] ?? 0,
-			$counts[ ContentWriter::FAILED ] ?? 0
+			$counts[ TextStore::REVERTED ] ?? 0,
+			$counts[ TextStore::EDITED ] ?? 0,
+			$counts[ TextStore::NONE ] ?? 0,
+			$counts[ TextStore::FAILED ] ?? 0
 		);
-		if ( isset( $counts[ ContentWriter::FAILED ] ) ) {
+		if ( isset( $counts[ TextStore::FAILED ] ) ) {
 			WP_CLI::warning( $line );
 			WP_CLI::halt( 1 );
 		}
@@ -146,17 +147,16 @@ final class ConvertCommand {
 	}
 
 	/**
-	 * The run's summary: blocks converted, posts written, what is left.
+	 * The run's summary: items converted, the places written, what stays.
 	 *
 	 * @param list<ConversionLine> $lines The lines.
 	 */
 	private static function done( array $lines ): string {
 		$converted = array_filter( $lines, static fn ( ConversionLine $line ): bool => ConversionLine::CONVERT === $line->action );
-		$posts     = count( array_unique( array_map( static fn ( ConversionLine $line ): int => $line->post, $converted ) ) );
-		$later     = count( array_filter( $lines, static fn ( ConversionLine $line ): bool => ConversionLine::LATER === $line->action ) );
+		$places    = count( array_unique( array_map( static fn ( ConversionLine $line ): string => $line->post . ' ' . $line->place, $converted ) ) );
 		$blocked   = count( array_filter( $lines, static fn ( ConversionLine $line ): bool => ConversionLine::BLOCKED === $line->action ) );
 
-		return sprintf( '%d Lasso blocks converted in %d posts; %d bare shortcodes left for Task LM4, %d blocked.', count( $converted ), $posts, $later, $blocked );
+		return sprintf( '%d Lasso items converted in %d places; %d blocked.', count( $converted ), $places, $blocked );
 	}
 
 	/**
@@ -168,6 +168,7 @@ final class ConvertCommand {
 	private static function row( ConversionLine $line ): array {
 		return array(
 			'post'    => $line->post,
+			'place'   => $line->place,
 			'status'  => $line->status,
 			'item'    => $line->kind,
 			'lasso'   => $line->lasso,
@@ -177,14 +178,14 @@ final class ConvertCommand {
 	}
 
 	/**
-	 * "N posts, N items: N to convert, N blocked."
+	 * "N places, N items: N to convert, N blocked."
 	 *
 	 * @param list<ConversionLine> $lines The lines.
 	 */
 	private static function summary( array $lines ): string {
-		$posts   = count( array_unique( array_map( static fn ( ConversionLine $line ): int => $line->post, $lines ) ) );
+		$places  = count( array_unique( array_map( static fn ( ConversionLine $line ): string => $line->post . ' ' . $line->place, $lines ) ) );
 		$convert = count( array_filter( $lines, static fn ( ConversionLine $line ): bool => ConversionLine::CONVERT === $line->action ) );
 
-		return sprintf( '%d posts, %d items: %d to convert, %d blocked.', $posts, count( $lines ), $convert, count( $lines ) - $convert );
+		return sprintf( '%d places, %d items: %d to convert, %d blocked.', $places, count( $lines ), $convert, count( $lines ) - $convert );
 	}
 }

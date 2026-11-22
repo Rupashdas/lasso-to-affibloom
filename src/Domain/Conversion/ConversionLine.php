@@ -20,22 +20,20 @@ final class ConversionLine {
 	/** The item stays as it is. */
 	public const BLOCKED = 'blocked';
 
-	/** A later task converts the item (bare shortcodes: LM4). */
-	public const LATER = 'later';
-
 	/** The item could not be written; its post was left as it was. */
 	public const ERROR = 'error';
 
 	/**
 	 * Builds the line.
 	 *
-	 * @param int    $post   The post.
-	 * @param string $status Its status.
+	 * @param int    $post   The post (0 for a widget).
+	 * @param string $place  Where in it: '' for its content, `elementor`, or a widget (`widget_text #3`).
+	 * @param string $status Its status (`widget` for a widget).
 	 * @param string $kind   The item's kind (LassoItem).
 	 * @param string $lasso  The item as written.
-	 * @param string $action CONVERT or BLOCKED.
+	 * @param string $action CONVERT, BLOCKED or ERROR.
 	 * @param string $target What it becomes; '' when blocked.
 	 * @param string $reason Why it is blocked; '' when converted.
 	 */
-	public function __construct( public readonly int $post, public readonly string $status, public readonly string $kind, public readonly string $lasso, public readonly string $action, public readonly string $target, public readonly string $reason ) {}
+	public function __construct( public readonly int $post, public readonly string $place, public readonly string $status, public readonly string $kind, public readonly string $lasso, public readonly string $action, public readonly string $target, public readonly string $reason ) {}
 }
