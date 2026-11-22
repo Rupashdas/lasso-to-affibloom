@@ -15,6 +15,7 @@ use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
+use AffibloomLassoMigrator\Domain\Lasso\LassoAddress;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Lasso\LassoViews;
 
@@ -273,6 +274,28 @@ final class WpLassoSource implements LassoSource {
 		$tour_done = '1' === (string) get_option( 'lasso_dashboard_tour_done', '' );
 
 		return new LassoViews( $views, $tour_done, $closed );
+	}
+
+	/**
+	 * Every record's cloaked address (R4, R8): `post_name`, `post_status`, `link_cloaking` read with intval as Lasso
+	 * does (missing is off), and the old slugs in `lasso_old_slug` and `_wp_old_slug` (WordPress's `__trashed` marks
+	 * left out: no address ever answered there).
+	 *
+	 * @return list<LassoAddress>
+	 */
+	public function slugs(): array {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's records.
+		$posts = $wpdb->get_results( $wpdb->prepare( "SELECT p.ID, p.post_name, p.post_status, MAX( m.meta_value ) AS cloak FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'link_cloaking' WHERE p.post_type = %s GROUP BY p.ID ORDER BY p.ID", self::POST_TYPE ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT m.post_id, m.meta_value FROM {$wpdb->postmeta} m JOIN {$wpdb->posts} p ON p.ID = m.post_id AND p.post_type = %s WHERE m.meta_key IN ( 'lasso_old_slug', '_wp_old_slug' ) AND m.meta_value <> '' AND m.meta_value NOT LIKE %s ORDER BY m.meta_id", self::POST_TYPE, '%' . $wpdb->esc_like( '__trashed' ) ) );
+		// phpcs:enable
+		$old = array();
+		foreach ( $rows as $row ) {
+			$old[ (int) $row->post_id ][] = (string) $row->meta_value;
+		}
+
+		return array_map( static fn ( object $post ): LassoAddress => new LassoAddress( (int) $post->ID, (string) $post->post_name, (string) $post->post_status, (int) $post->cloak > 0, $old[ (int) $post->ID ] ?? array() ), $posts );
 	}
 
 	/**

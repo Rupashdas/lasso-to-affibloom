@@ -7,6 +7,7 @@ use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
+use AffibloomLassoMigrator\Domain\Lasso\LassoAddress;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Lasso\LassoViews;
 
@@ -25,8 +26,13 @@ final class FakeLassoSource implements LassoSource {
 	 * @param list<LassoGroup>  $groups    Lasso's groups.
 	 * @param LassoAmazon       $amazon    Lasso's Amazon data.
 	 * @param LassoViews        $views     Lasso's saved views, tour and boxes.
+	 * @param list<LassoAddress> $slugs    The records' addresses.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array() ) {}
+
+	public function slugs(): array {
+		return $this->slugs;
+	}
 
 	public function views(): LassoViews {
 		return $this->views;

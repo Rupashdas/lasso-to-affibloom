@@ -60,4 +60,11 @@ interface LassoSource {
 	 * Lasso's saved Dashboard views by user, whether its Dashboard tour was ended, and its closed education boxes.
 	 */
 	public function views(): LassoViews;
+
+	/**
+	 * Every Lasso record's cloaked address: slug, status, cloaking switch and old slugs, by post ID.
+	 *
+	 * @return list<LassoAddress>
+	 */
+	public function slugs(): array;
 }
