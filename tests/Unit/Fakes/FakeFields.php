@@ -18,7 +18,11 @@ final class FakeFields implements FieldWriter {
 	private int $next = 100;
 
 	public function __construct() {
-		foreach ( array( 1 => 'Primary Rating', 2 => 'Pros', 3 => 'Cons' ) as $id => $name ) {
+		foreach ( array(
+			1 => 'Primary Rating',
+			2 => 'Pros',
+			3 => 'Cons',
+		) as $id => $name ) {
 			$this->definitions[ $id ] = array(
 				'id'          => $id,
 				'name'        => $name,

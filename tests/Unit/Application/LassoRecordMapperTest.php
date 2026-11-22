@@ -23,11 +23,20 @@ final class LassoRecordMapperTest extends TestCase {
 	/**
 	 * A record with the given parts.
 	 *
-	 * @param array<string, string>      $meta   Post meta.
-	 * @param array<string, mixed>       $parts  Other constructor arguments by name.
+	 * @param array<string, string> $meta   Post meta.
+	 * @param array<string, mixed>  $parts  Other constructor arguments by name.
 	 */
 	private static function record( array $meta = array(), array $parts = array() ): LassoRecord {
-		return new LassoRecord( ...array_merge( array( 'id' => 7, 'title' => 'Mizuno Wave', 'meta' => $meta ), $parts ) );
+		return new LassoRecord(
+			...array_merge(
+				array(
+					'id'    => 7,
+					'title' => 'Mizuno Wave',
+					'meta'  => $meta,
+				),
+				$parts
+			)
+		);
 	}
 
 	public function test_a_record_with_no_link_has_no_fields(): void {
@@ -36,23 +45,53 @@ final class LassoRecordMapperTest extends TestCase {
 
 	public function test_the_link_is_url_details_then_the_custom_redirect_then_the_final_url(): void {
 		self::assertSame( 'https://a.example/', $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://c.example/' ), array( 'redirect_url' => 'https://a.example/' ) ) )['url'] );
-		self::assertSame( 'https://b.example/', $this->mapper->fields( self::record( array( 'lasso_custom_redirect' => 'https://b.example/', 'lasso_final_url' => 'https://c.example/' ) ) )['url'] );
+		self::assertSame(
+			'https://b.example/',
+			$this->mapper->fields(
+				self::record(
+					array(
+						'lasso_custom_redirect' => 'https://b.example/',
+						'lasso_final_url'       => 'https://c.example/',
+					)
+				)
+			)['url']
+		);
 		self::assertSame( 'https://c.example/', $this->mapper->fields( self::record( array( 'lasso_final_url' => ' https://c.example/ ' ) ) )['url'] );
 	}
 
 	public function test_a_flag_is_on_only_when_it_is_1_and_show_price_left_out_means_the_setting(): void {
-		$fields = $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://c.example/', 'open_new_tab' => '1', 'enable_nofollow' => 'on' ) ) );
+		$fields = $this->mapper->fields(
+			self::record(
+				array(
+					'lasso_final_url' => 'https://c.example/',
+					'open_new_tab'    => '1',
+					'enable_nofollow' => 'on',
+				)
+			)
+		);
 
 		self::assertTrue( $fields['new_tab'] );
 		self::assertFalse( $fields['nofollow'] );
 		self::assertArrayNotHasKey( 'show_price', $fields );
-		self::assertFalse( $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://c.example/', 'show_price' => '0' ) ) )['show_price'] );
+		self::assertFalse(
+			$this->mapper->fields(
+				self::record(
+					array(
+						'lasso_final_url' => 'https://c.example/',
+						'show_price'      => '0',
+					)
+				)
+			)['show_price']
+		);
 	}
 
 	public function test_an_amazon_record_takes_the_cached_link_price_prime_and_name_for_a_title_amazon(): void {
 		$fields = $this->mapper->fields(
 			self::record(
-				array( 'lasso_final_url' => 'https://www.amazon.com/dp/B0TEST0001', 'price' => '$1' ),
+				array(
+					'lasso_final_url' => 'https://www.amazon.com/dp/B0TEST0001',
+					'price'           => '$1',
+				),
 				array(
 					'title'        => 'Amazon',
 					'product_type' => 'amazon',
@@ -75,16 +114,71 @@ final class LassoRecordMapperTest extends TestCase {
 	}
 
 	public function test_another_store_s_cached_price_fills_an_empty_own_price_only(): void {
-		self::assertSame( '$24.00', $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://walmart.example/1', 'price' => '<p></p>' ), array( 'product_type' => 'walmart', 'store_price' => '$24.00' ) ) )['price'] );
-		self::assertSame( '$20', $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://walmart.example/1', 'price' => '$20' ), array( 'product_type' => 'walmart', 'store_price' => '$24.00' ) ) )['price'] );
+		self::assertSame(
+			'$24.00',
+			$this->mapper->fields(
+				self::record(
+					array(
+						'lasso_final_url' => 'https://walmart.example/1',
+						'price'           => '<p></p>',
+					),
+					array(
+						'product_type' => 'walmart',
+						'store_price'  => '$24.00',
+					)
+				)
+			)['price']
+		);
+		self::assertSame(
+			'$20',
+			$this->mapper->fields(
+				self::record(
+					array(
+						'lasso_final_url' => 'https://walmart.example/1',
+						'price'           => '$20',
+					),
+					array(
+						'product_type' => 'walmart',
+						'store_price'  => '$24.00',
+					)
+				)
+			)['price']
+		);
 	}
 
 	public function test_the_image_order_of_get_lasso_thumbnail(): void {
 		$link = array( 'lasso_final_url' => 'https://c.example/' );
 
-		self::assertSame( array( 'https://x.example/custom.jpg', 0 ), $this->image( $link + array( 'lasso_custom_thumbnail' => 'https://x.example/custom.jpg' ), array( 'thumbnail_url' => 'https://x.example/f.jpg', 'thumbnail_id' => 5 ) ) );
-		self::assertSame( array( 'https://x.example/f.jpg', 5 ), $this->image( $link, array( 'thumbnail_url' => 'https://x.example/f.jpg', 'thumbnail_id' => 5 ) ) );
-		self::assertSame( array( 'https://x.example/imported.jpg', 0 ), $this->image( $link + array( 'lasso_thumbnail_url' => 'https://x.example/imported.jpg', 'lasso_thumbnail_id' => '9' ), array( 'attached_url' => 'https://x.example/a.jpg' ) ) );
+		self::assertSame(
+			array( 'https://x.example/custom.jpg', 0 ),
+			$this->image(
+				$link + array( 'lasso_custom_thumbnail' => 'https://x.example/custom.jpg' ),
+				array(
+					'thumbnail_url' => 'https://x.example/f.jpg',
+					'thumbnail_id'  => 5,
+				)
+			)
+		);
+		self::assertSame(
+			array( 'https://x.example/f.jpg', 5 ),
+			$this->image(
+				$link,
+				array(
+					'thumbnail_url' => 'https://x.example/f.jpg',
+					'thumbnail_id'  => 5,
+				)
+			)
+		);
+		self::assertSame(
+			array( 'https://x.example/imported.jpg', 0 ),
+			$this->image(
+				$link + array(
+					'lasso_thumbnail_url' => 'https://x.example/imported.jpg',
+					'lasso_thumbnail_id'  => '9',
+				),
+				array( 'attached_url' => 'https://x.example/a.jpg' )
+			)
+		);
 		self::assertSame( array( 'https://x.example/a.jpg', 9 ), $this->image( $link + array( 'lasso_thumbnail_id' => '9' ), array( 'attached_url' => 'https://x.example/a.jpg' ) ) );
 	}
 
@@ -99,8 +193,28 @@ final class LassoRecordMapperTest extends TestCase {
 	public function test_a_short_description_is_hidden_when_show_description_is_off(): void {
 		$link = array( 'lasso_final_url' => 'https://c.example/' );
 
-		self::assertSame( '', $this->mapper->fields( self::record( $link + array( 'affiliate_desc' => 'Short one', 'show_description' => '0' ) ) )['description'] );
-		self::assertSame( 'A description longer than ten', $this->mapper->fields( self::record( $link + array( 'affiliate_desc' => 'A description longer than ten', 'show_description' => '0' ) ) )['description'] );
+		self::assertSame(
+			'',
+			$this->mapper->fields(
+				self::record(
+					$link + array(
+						'affiliate_desc'   => 'Short one',
+						'show_description' => '0',
+					)
+				)
+			)['description']
+		);
+		self::assertSame(
+			'A description longer than ten',
+			$this->mapper->fields(
+				self::record(
+					$link + array(
+						'affiliate_desc'   => 'A description longer than ten',
+						'show_description' => '0',
+					)
+				)
+			)['description']
+		);
 	}
 
 	public function test_the_second_button_comes_when_it_has_a_link_or_text(): void {
@@ -116,7 +230,15 @@ final class LassoRecordMapperTest extends TestCase {
 					'nofollow' => false,
 				),
 			),
-			$this->mapper->fields( self::record( $link + array( 'second_btn_url' => ' https://d.example/ ', 'second_btn_text' => 'Buy at Walmart', 'open_new_tab2' => '1' ) ) )['buttons']
+			$this->mapper->fields(
+				self::record(
+					$link + array(
+						'second_btn_url'  => ' https://d.example/ ',
+						'second_btn_text' => 'Buy at Walmart',
+						'open_new_tab2'   => '1',
+					)
+				)
+			)['buttons']
 		);
 	}
 

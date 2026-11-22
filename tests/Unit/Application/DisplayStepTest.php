@@ -33,7 +33,11 @@ final class DisplayStepTest extends TestCase {
 	private function step(): DisplayStep {
 		$lasso = new LassoSettings(
 			array(
-				'theme_name'     => array( 'single' => 'Lab', 'grid' => 'Cutter', 'list' => 'Cutter' ),
+				'theme_name'     => array(
+					'single' => 'Lab',
+					'grid'   => 'Cutter',
+					'list'   => 'Cutter',
+				),
 				'display_colors' => array( 'single' => array( 'main' => '#111111' ) ),
 				'display_layout' => array( 'columns' => 2 ),
 			)

@@ -97,7 +97,14 @@ final class SettingsMapperTest extends TestCase {
 
 	public function test_show_disclosure_list_follows_show_disclosure_when_never_stored(): void {
 		self::assertFalse( ( new LassoSettings( array( 'show_disclosure' => false ) ) )->bool( 'show_disclosure_list' ) );
-		self::assertTrue( ( new LassoSettings( array( 'show_disclosure' => false, 'show_disclosure_list' => true ) ) )->bool( 'show_disclosure_list' ) );
+		self::assertTrue(
+			( new LassoSettings(
+				array(
+					'show_disclosure'      => false,
+					'show_disclosure_list' => true,
+				)
+			) )->bool( 'show_disclosure_list' )
+		);
 	}
 
 	public function test_lasso_s_placeholder_thumbnail_and_an_empty_default_css_are_left(): void {

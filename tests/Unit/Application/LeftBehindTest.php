@@ -46,6 +46,9 @@ final class LeftBehindTest extends TestCase {
 			public function fields(): LassoFields {
 				return new LassoFields();
 			}
+			public function groups(): array {
+				return array();
+			}
 		};
 	}
 

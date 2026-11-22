@@ -10,7 +10,9 @@ use Affibloom\Application\Display\DisplaySettingsService;
 use Affibloom\Extension\Api;
 use Affibloom\Application\Fields\FieldsService;
 use Affibloom\Extension\DisplayAccess;
+use Affibloom\Application\Groups\GroupService;
 use Affibloom\Extension\FieldAccess;
+use Affibloom\Extension\GroupAccess;
 use Affibloom\Application\Settings\SettingsService;
 use Affibloom\Extension\ProductAccess;
 use Affibloom\Extension\SettingsAccess;
@@ -23,6 +25,7 @@ use Affibloom\Tests\Unit\Fakes\InMemoryAmazonProducts;
 use Affibloom\Tests\Unit\Fakes\InMemoryDisplaySettingsRepository;
 use Affibloom\Tests\Unit\Fakes\InMemoryFieldRepository;
 use Affibloom\Tests\Unit\Fakes\InMemoryFieldUsage;
+use Affibloom\Tests\Unit\Fakes\InMemoryGroupRepository;
 use Affibloom\Tests\Unit\Fakes\InMemoryProductRepository;
 use Affibloom\Tests\Unit\Fakes\InMemorySettingsRepository;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
@@ -61,7 +64,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ) );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ) );
 	}
 
 	/** The menu's slugs. */

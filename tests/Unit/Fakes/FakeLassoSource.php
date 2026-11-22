@@ -2,6 +2,7 @@
 namespace AffibloomLassoMigrator\Tests\Unit\Fakes;
 
 use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
+use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
@@ -19,8 +20,13 @@ final class FakeLassoSource implements LassoSource {
 	 * @param LassoInventory    $inventory The counts.
 	 * @param LassoSettings     $settings  Lasso's settings.
 	 * @param LassoFields       $fields    Lasso's custom fields.
+	 * @param list<LassoGroup>  $groups    Lasso's groups.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array() ) {}
+
+	public function groups(): array {
+		return $this->groups;
+	}
 
 	public function fields(): LassoFields {
 		return $this->fields;

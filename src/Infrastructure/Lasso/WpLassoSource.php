@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator\Infrastructure\Lasso;
 
 use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
+use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
@@ -193,6 +194,35 @@ final class WpLassoSource implements LassoSource {
 		// phpcs:enable
 
 		return new LassoFields( $definitions, $values );
+	}
+
+	/**
+	 * Lasso's groups (R13): the `lasso-cat` terms, their `lasso-urls` records, ordered by `lasso_category_order`
+	 * (`parent_slug`, `term_order`), the records it does not order after them, oldest first. SELECTs only.
+	 *
+	 * @return list<LassoGroup>
+	 */
+	public function groups(): array {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's groups.
+		$terms   = $wpdb->get_results( $wpdb->prepare( "SELECT t.term_id, t.name, t.slug, tt.description, tt.term_taxonomy_id FROM {$wpdb->terms} t JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id WHERE tt.taxonomy = %s ORDER BY t.term_id", 'lasso-cat' ) );
+		$ordered = array();
+		if ( $this->has_table( 'lasso_category_order' ) ) {
+			foreach ( $wpdb->get_results( "SELECT item_id, parent_slug, term_order FROM {$wpdb->prefix}lasso_category_order" ) as $row ) {
+				$ordered[ (string) $row->parent_slug ][ (int) $row->item_id ] = (int) $row->term_order;
+			}
+		}
+		$groups = array();
+		foreach ( $terms as $term ) {
+			$members = array_map( 'intval', $wpdb->get_col( $wpdb->prepare( "SELECT r.object_id FROM {$wpdb->term_relationships} r JOIN {$wpdb->posts} p ON p.ID = r.object_id AND p.post_type = %s WHERE r.term_taxonomy_id = %d ORDER BY p.post_date, p.ID", self::POST_TYPE, (int) $term->term_taxonomy_id ) ) );
+			$rank    = $ordered[ (string) $term->slug ] ?? array();
+			usort( $members, static fn ( int $a, int $b ): int => array( $rank[ $a ] ?? PHP_INT_MAX, $a ) <=> array( $rank[ $b ] ?? PHP_INT_MAX, $b ) );
+			$groups[] = new LassoGroup( (int) $term->term_id, (string) $term->name, (string) $term->slug, (string) $term->description, $members );
+		}
+		// phpcs:enable
+
+		return $groups;
 	}
 
 	/**

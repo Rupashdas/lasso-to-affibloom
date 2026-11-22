@@ -44,7 +44,14 @@ final class ProductsStepTest extends TestCase {
 	}
 
 	private static function retired( int $id, int $to ): LassoRecord {
-		return self::record( $id, 'lasso_delete', array( 'lasso_final_url' => 'https://c.example/', 'lasso_repointed_to_lasso_id' => (string) $to ) );
+		return self::record(
+			$id,
+			'lasso_delete',
+			array(
+				'lasso_final_url'             => 'https://c.example/',
+				'lasso_repointed_to_lasso_id' => (string) $to,
+			)
+		);
 	}
 
 	/**
@@ -73,7 +80,16 @@ final class ProductsStepTest extends TestCase {
 			)
 		)->plan();
 
-		self::assertSame( array( '1' => 'create', '2' => 'trash', '3' => 'retire', '4' => 'skip', '5' => 'skip' ), self::actions( $lines ) );
+		self::assertSame(
+			array(
+				'1' => 'create',
+				'2' => 'trash',
+				'3' => 'retire',
+				'4' => 'skip',
+				'5' => 'skip',
+			),
+			self::actions( $lines )
+		);
 		self::assertSame( 'Lasso #1', $lines[2]->target );
 		self::assertSame( 'no link; ASIN B07XYZ1234 in its slug', $lines[3]->note );
 		self::assertSame( 'other', $lines[0]->type );
@@ -93,7 +109,15 @@ final class ProductsStepTest extends TestCase {
 		// The retired record comes first in Lasso's order; its target's product must exist before it is retired.
 		$lines = $this->step( array( self::retired( 3, 1 ), self::record( 1 ), self::record( 2, 'trash' ), self::record( 4, 'publish', array() ) ) )->run();
 
-		self::assertSame( array( '3' => 'retire', '1' => 'create', '2' => 'trash', '4' => 'skip' ), self::actions( $lines ) );
+		self::assertSame(
+			array(
+				'3' => 'retire',
+				'1' => 'create',
+				'2' => 'trash',
+				'4' => 'skip',
+			),
+			self::actions( $lines )
+		);
 		$target = $this->map->for_record( 1 )[0];
 		$old    = $this->map->for_record( 3 )[0];
 		self::assertSame( 'publish', $this->affibloom->products[ $target ]['status'] );
@@ -113,7 +137,14 @@ final class ProductsStepTest extends TestCase {
 
 		$again = $this->step( $records )->run();
 
-		self::assertSame( array( '1' => 'unchanged', '2' => 'unchanged', '3' => 'unchanged' ), self::actions( $again ) );
+		self::assertSame(
+			array(
+				'1' => 'unchanged',
+				'2' => 'unchanged',
+				'3' => 'unchanged',
+			),
+			self::actions( $again )
+		);
 		self::assertSame( $written, $this->affibloom->products );
 	}
 
@@ -138,7 +169,13 @@ final class ProductsStepTest extends TestCase {
 		$this->affibloom->refuse_url = 'https://bad.example/';
 		$lines                       = $this->step( array( self::record( 1, 'publish', array( 'lasso_final_url' => 'https://bad.example/' ) ), self::record( 2 ) ) )->run();
 
-		self::assertSame( array( '1' => 'error', '2' => 'create' ), self::actions( $lines ) );
+		self::assertSame(
+			array(
+				'1' => 'error',
+				'2' => 'create',
+			),
+			self::actions( $lines )
+		);
 		self::assertSame( 'url: invalid_url', $lines[0]->note );
 	}
 
@@ -190,7 +227,7 @@ final class ProductsStepTest extends TestCase {
 
 	public function test_update_leaves_a_product_no_longer_published_and_reports_a_record_deleted_in_lasso(): void {
 		$this->step( array( self::badged( 1, 'Best' ), self::record( 2 ) ) )->run();
-		$product                                       = $this->map->for_record( 1 )[0];
+		$product = $this->map->for_record( 1 )[0];
 		$this->affibloom->products[ $product ]['status'] = 'trash';
 
 		$lines = $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true );
@@ -206,7 +243,13 @@ final class ProductsStepTest extends TestCase {
 
 		$lines = $this->step( array( self::record( 1 ), self::record( 2 ) ) )->run( true );
 
-		self::assertSame( array( '1' => 'unchanged', '2' => 'create' ), self::actions( $lines ) );
+		self::assertSame(
+			array(
+				'1' => 'unchanged',
+				'2' => 'create',
+			),
+			self::actions( $lines )
+		);
 	}
 
 	public function test_two_products_with_one_lasso_id_stop_the_family_naming_both(): void {

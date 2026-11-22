@@ -43,4 +43,11 @@ interface LassoSource {
 	 * Lasso's custom fields: definitions, each record's values, "show field name".
 	 */
 	public function fields(): LassoFields;
+
+	/**
+	 * Lasso's groups with their records in Lasso's order.
+	 *
+	 * @return list<LassoGroup>
+	 */
+	public function groups(): array;
 }
