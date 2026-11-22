@@ -1,0 +1,14 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 6
+	# The result cache stays with the project, not in the system temp folder that gets cleared.
+	tmpDir: .local/phpstan
+	phpVersion: 80300
+	# Affibloom's extension API, from the Affibloom checkout beside this plugin.
+	scanDirectories:
+		- ../affibloom/src
+	paths:
+		- affibloom-lasso-migrator.php
+		- src

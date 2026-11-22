@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<ruleset name="Affibloom Lasso Migrator">
+	<description>WordPress Coding Standards for the Affibloom Lasso Migrator.</description>
+
+	<file>affibloom-lasso-migrator.php</file>
+	<file>src</file>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<config name="testVersion" value="8.3-"/>
+	<config name="minimum_wp_version" value="7.1.4"/>
+
+	<rule ref="WordPress">
+		<!-- PSR-4 file names (Plugin.php), not class-plugin.php. -->
+		<exclude name="WordPress.Files.FileName"/>
+		<!-- @param list<string> and similar PHPStan types are more exact than the PHP type "array". -->
+		<exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP"/>
+	<!-- PHP 8.0+ reads a namespaced name as one token, so AffibloomLassoMigrator\Interface\… is valid (8.3 is needed).
+	     PHPCompatibility 9.3.5 predates that rule and still reports the keyword. -->
+	<rule ref="PHPCompatibility.Keywords.ForbiddenNames.interfaceFound">
+		<exclude-pattern>src/Interface/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="affibloom-lasso-migrator"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="affibloom_lasso"/>
+				<element value="AffibloomLassoMigrator"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>
