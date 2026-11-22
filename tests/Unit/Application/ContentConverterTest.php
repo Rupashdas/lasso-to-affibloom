@@ -61,9 +61,12 @@ final class ContentConverterTest extends TestCase {
 					'lost'       => $lost,
 				);
 			}
+			public function markup( array $attributes ): string {
+				return '';
+			}
 		};
 
-		return new ContentConverter( $content, $blocks, static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ) );
+		return new ContentConverter( $content, $blocks, static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ), new \AffibloomLassoMigrator\Tests\Unit\Fakes\FakeContentWriter(), new \AffibloomLassoMigrator\Tests\Unit\Fakes\FakeConversionLock() );
 	}
 
 	/**

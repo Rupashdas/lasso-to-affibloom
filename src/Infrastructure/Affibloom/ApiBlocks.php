@@ -33,4 +33,21 @@ final class ApiBlocks implements AffibloomBlocks {
 	public function for_shortcode( array $attributes ): ?array {
 		return $this->api->block_for_shortcode( $attributes );
 	}
+
+	/**
+	 * The block as WordPress stores it: a self-closing comment, as Affibloom's dynamic block saves (Task LM3).
+	 *
+	 * @param array<string, mixed> $attributes The block's attributes.
+	 */
+	public function markup( array $attributes ): string {
+		return serialize_block(
+			array(
+				'blockName'    => 'affibloom/product-box',
+				'attrs'        => $attributes,
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			)
+		);
+	}
 }

@@ -22,4 +22,11 @@ interface AffibloomBlocks {
 	 * @return array{attributes: array<string, mixed>, lost: list<string>}|null
 	 */
 	public function for_shortcode( array $attributes ): ?array;
+
+	/**
+	 * The block as a post stores it: its comment with its attributes, as WordPress serializes a block (Task LM3).
+	 *
+	 * @param array<string, mixed> $attributes The block's attributes (for_shortcode()'s).
+	 */
+	public function markup( array $attributes ): string;
 }

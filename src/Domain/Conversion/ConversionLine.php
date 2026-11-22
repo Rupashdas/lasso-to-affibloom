@@ -20,6 +20,12 @@ final class ConversionLine {
 	/** The item stays as it is. */
 	public const BLOCKED = 'blocked';
 
+	/** A later task converts the item (bare shortcodes: LM4). */
+	public const LATER = 'later';
+
+	/** The item could not be written; its post was left as it was. */
+	public const ERROR = 'error';
+
 	/**
 	 * Builds the line.
 	 *
