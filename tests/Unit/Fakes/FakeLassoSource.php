@@ -30,8 +30,13 @@ final class FakeLassoSource implements LassoSource {
 	 * @param list<LassoAddress> $slugs    The records' addresses.
 	 * @param array<int, list<array{name: string, key: string, kind: string}>> $variants The records' variants.
 	 * @param LassoIssues $issues Lasso's link issues and dismissals.
+	 * @param list<array<string, mixed>> $tables Lasso's comparison tables.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array(), private array $variants = array(), private LassoIssues $issues = new LassoIssues() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array(), private array $variants = array(), private LassoIssues $issues = new LassoIssues(), private array $tables = array() ) {}
+
+	public function tables(): array {
+		return $this->tables;
+	}
 
 	public function issues(): LassoIssues {
 		return $this->issues;

@@ -66,7 +66,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ), new AmazonAccess( new InMemoryAmazonProducts() ), ApiTest::views(), ApiTest::variants(), ApiTest::issues() );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ), new AmazonAccess( new InMemoryAmazonProducts() ), ApiTest::views(), ApiTest::variants(), ApiTest::issues(), ApiTest::tables() );
 	}
 
 	/** The menu's slugs. */

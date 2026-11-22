@@ -300,6 +300,67 @@ final class WpLassoSource implements LassoSource {
 	}
 
 	/**
+	 * Lasso's comparison tables (R14): `lasso_table_details`, its products from `lasso_table_mapping` in their order, its
+	 * field groups from `lasso_table_field_group` (by their order, then as stored) and each product's value per field
+	 * from `lasso_table_field_group_detail` in the table's groups.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function tables(): array {
+		global $wpdb;
+
+		if ( ! $this->has_table( 'lasso_table_details' ) ) {
+			return array();
+		}
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's tables.
+		$tables = array();
+		foreach ( $wpdb->get_results( "SELECT id, title, style, theme, show_title, show_headers_horizontal FROM {$wpdb->prefix}lasso_table_details ORDER BY id" ) as $table ) {
+			$id       = (int) $table->id;
+			$products = $wpdb->get_results( $wpdb->prepare( "SELECT lasso_id, badge_text FROM {$wpdb->prefix}lasso_table_mapping WHERE table_id = %d ORDER BY `order`, id", $id ) );
+			$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT field_group_id, field_id, MIN( `order` ) AS position, MIN( id ) AS first FROM {$wpdb->prefix}lasso_table_field_group WHERE table_id = %d GROUP BY field_group_id, field_id ORDER BY position, first", $id ) );
+			$groups   = array();
+			foreach ( $rows as $row ) {
+				$groups[ (string) $row->field_group_id ][] = (int) $row->field_id;
+			}
+			$values = array();
+			if ( array() !== $groups ) {
+				$in = implode( ',', array_fill( 0, count( $groups ), '%s' ) );
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $in holds only %s placeholders, filled by prepare().
+				foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT lasso_id, field_id, field_value FROM {$wpdb->prefix}lasso_table_field_group_detail WHERE field_group_id IN ( $in ) ORDER BY id", ...array_keys( $groups ) ) ) as $cell ) {
+					$values[ (int) $cell->lasso_id ][ (int) $cell->field_id ] ??= (string) $cell->field_value;
+				}
+			}
+			$tables[] = array(
+				'id'           => $id,
+				'title'        => (string) $table->title,
+				'style'        => (string) $table->style,
+				'theme'        => (string) $table->theme,
+				'show_title'   => '1' === (string) $table->show_title,
+				'show_headers' => '1' === (string) $table->show_headers_horizontal,
+				'products'     => array_map(
+					static fn ( object $row ): array => array(
+						'lasso_id' => (int) $row->lasso_id,
+						'badge'    => (string) $row->badge_text,
+					),
+					$products
+				),
+				'groups'       => array_map(
+					static fn ( string $group, array $fields ): array => array(
+						'id'     => $group,
+						'fields' => $fields,
+					),
+					array_map( 'strval', array_keys( $groups ) ),
+					array_values( $groups )
+				),
+				'values'       => $values,
+			);
+		}
+		// phpcs:enable
+
+		return $tables;
+	}
+
+	/**
 	 * Lasso's link issues (R16): every `lasso_url_issues` row, and the `dismiss_broken` / `dismiss_out_of_stock` times on
 	 * its records.
 	 */

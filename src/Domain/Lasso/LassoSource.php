@@ -79,4 +79,12 @@ interface LassoSource {
 	 * Lasso's link issues and the issue bars editors closed.
 	 */
 	public function issues(): LassoIssues;
+
+	/**
+	 * Lasso's comparison tables: `{ id, title, style, theme, show_title, show_headers, products: [{ lasso_id, badge }],
+	 * groups: [{ id, fields }], values: { lasso_id: { field: value } } }`, products and groups in Lasso's order.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function tables(): array;
 }
