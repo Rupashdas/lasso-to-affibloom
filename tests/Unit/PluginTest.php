@@ -21,6 +21,7 @@ use Affibloom\Interface\Admin\AdminNavigation;
 use Affibloom\Interface\Admin\ExtensionScreen;
 use Affibloom\Interface\Admin\NavItem;
 use Affibloom\Interface\Template;
+use Affibloom\Tests\Unit\Extension\ApiTest;
 use Affibloom\Tests\Unit\Fakes\FakePageFetcher;
 use Affibloom\Tests\Unit\Fakes\InMemoryAmazonProducts;
 use Affibloom\Tests\Unit\Fakes\InMemoryDisplaySettingsRepository;
@@ -65,7 +66,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ), new AmazonAccess( new InMemoryAmazonProducts() ) );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ), new AmazonAccess( new InMemoryAmazonProducts() ), ApiTest::views() );
 	}
 
 	/** The menu's slugs. */

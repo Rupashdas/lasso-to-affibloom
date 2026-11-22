@@ -16,6 +16,7 @@ use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
+use AffibloomLassoMigrator\Domain\Lasso\LassoViews;
 
 /**
  * Lasso's records from the database, with SELECTs only (ADR-2): the `lasso-urls` posts of every status and the meta
@@ -247,6 +248,31 @@ final class WpLassoSource implements LassoSource {
 		unset( $settings );
 
 		return new LassoAmazon( array_map( static fn ( array $row ): array => array_map( 'strval', $row ), $rows ), $tracking_ids, $other_stores, $creators );
+	}
+
+	/**
+	 * Lasso's saved Dashboard views (R22): each user's `lasso_dashboard_saved_views` list; the site's
+	 * `lasso_dashboard_tour_done`; and the education boxes `lasso_settings` marks `hide`.
+	 */
+	public function views(): LassoViews {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time read of every user's Lasso views.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s ORDER BY user_id", 'lasso_dashboard_saved_views' ) );
+		// phpcs:enable
+		$views = array();
+		foreach ( $rows as $row ) {
+			$list = maybe_unserialize( $row->meta_value );
+			if ( is_array( $list ) && array() !== $list ) {
+				$views[ (int) $row->user_id ] = array_values( $list );
+			}
+		}
+		$settings = get_option( 'lasso_settings', array() );
+		$closed   = array_values( array_filter( LassoViews::BOXES, static fn ( string $box ): bool => is_array( $settings ) && 'hide' === ( $settings[ $box . '-opportunities' ] ?? '' ) ) );
+
+		$tour_done = '1' === (string) get_option( 'lasso_dashboard_tour_done', '' );
+
+		return new LassoViews( $views, $tour_done, $closed );
 	}
 
 	/**

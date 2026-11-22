@@ -55,4 +55,9 @@ interface LassoSource {
 	 * Lasso's Amazon data: the cached rows records use, counts, and whether Creators credentials are set.
 	 */
 	public function amazon(): LassoAmazon;
+
+	/**
+	 * Lasso's saved Dashboard views by user, whether its Dashboard tour was ended, and its closed education boxes.
+	 */
+	public function views(): LassoViews;
 }

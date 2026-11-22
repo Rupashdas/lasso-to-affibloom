@@ -110,6 +110,10 @@ final class SettingsMapper {
 		'open_new_tab2'                         => "no Affibloom setting: a new second button starts with both on, Lasso's default",
 		'enable_brag_mode'                      => 'brag mode is not in Affibloom (deviation 95)',
 		'lasso_affiliate_URL'                   => 'brag mode is not in Affibloom (deviation 95)',
+		'link-opportunities'                    => 'a closed education box: the views family closes it in Affibloom too',
+		'content-opportunities'                 => 'a closed education box: the views family closes it in Affibloom too',
+		'domain-opportunities'                  => 'a closed education box: the views family closes it in Affibloom too',
+		'keyword-opportunities'                 => 'an education box of a keyword screen Affibloom does not have',
 	);
 
 	/** Lasso's roles for its permission setting → Affibloom's (Permission). */

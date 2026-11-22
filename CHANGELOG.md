@@ -18,5 +18,6 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 - The dry run's settings and display families: every key of Lasso's settings with its Affibloom setting and value, or why it is left; secrets are never read.
 - The dry run's other families say what the site holds for them and which task moves them; with every family, it ends with every Lasso table and option group and where it goes, or why it is left.
 - `wp affibloom-lasso migrate --only=amazon`: the cached Amazon data of Lasso's products into Affibloom's store, unless Affibloom's own is as new; no secret is copied.
+- `--only=views`: saved Dashboard views, the tour flag and the closed education boxes (Task 26M).
 
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.
