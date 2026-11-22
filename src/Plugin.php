@@ -10,7 +10,15 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator;
 
 use Affibloom\Extension\Api;
+use AffibloomLassoMigrator\Application\LassoRecordMapper;
+use AffibloomLassoMigrator\Application\MigrationService;
+use AffibloomLassoMigrator\Application\ProductsStep;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProductRules;
+use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
+use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
+use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
+use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 
 /**
  * The composition root: everything the migrator needs, built once, and hooked into WordPress only when Affibloom hands
@@ -25,16 +33,18 @@ final class Plugin {
 	public const REQUIRES = '1.0.0-rc.1';
 
 	/**
-	 * Lasso's own version option, there while Lasso's data is (Lasso's `lasso_version`). Read only.
-	 */
-	private const LASSO_VERSION_OPTION = 'lasso_version';
-
-	/**
 	 * Whether Affibloom handed over a new enough API.
 	 *
 	 * @var bool
 	 */
 	private bool $started = false;
+
+	/**
+	 * Builds the composition root.
+	 *
+	 * @param LassoInstall $lasso Whether the site has Lasso's data.
+	 */
+	public function __construct( private LassoInstall $lasso = new LassoInstall() ) {}
 
 	/**
 	 * Entry point, called once from affibloom-lasso-migrator.php.
@@ -72,6 +82,20 @@ final class Plugin {
 			$screen->render( ... )
 		);
 		add_filter( 'affibloom_setup_wanted', array( $this, 'setup_wanted' ) );
+		$this->migrate_command( $api )->register();
+	}
+
+	/**
+	 * `wp affibloom-lasso migrate` with the families built so far (F10 D3).
+	 *
+	 * @param Api $api Affibloom's extension API.
+	 */
+	private function migrate_command( Api $api ): MigrateCommand {
+		$steps = array(
+			new ProductsStep( new WpLassoSource(), new LassoRecordMapper( site_url() ), new LassoIdMap(), new ApiProductRules( $api ) ),
+		);
+
+		return new MigrateCommand( new MigrationService( $steps ), $this->lasso );
 	}
 
 	/**
@@ -80,7 +104,7 @@ final class Plugin {
 	 * @param bool $wanted What Affibloom or another plugin decided so far.
 	 */
 	public function setup_wanted( bool $wanted ): bool {
-		return $wanted && false === get_option( self::LASSO_VERSION_OPTION, false );
+		return $wanted && ! $this->lasso->has_data();
 	}
 
 	/**

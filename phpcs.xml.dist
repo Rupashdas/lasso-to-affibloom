@@ -19,6 +19,11 @@
 		<exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
 	</rule>
 
+	<!-- Domain and Application exceptions carry plain messages; the Interface layer escapes what it prints. -->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>src/Domain/*</exclude-pattern>
+		<exclude-pattern>src/Application/*</exclude-pattern>
+	</rule>
 	<rule ref="PHPCompatibilityWP"/>
 	<!-- PHP 8.0+ reads a namespaced name as one token, so AffibloomLassoMigrator\Interface\… is valid (8.3 is needed).
 	     PHPCompatibility 9.3.5 predates that rule and still reports the keyword. -->

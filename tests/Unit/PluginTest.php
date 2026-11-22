@@ -24,6 +24,7 @@ final class PluginTest extends TestCase {
 		Functions\stubTranslationFunctions();
 		Functions\stubEscapeFunctions();
 		Functions\when( 'current_user_can' )->justReturn( true );
+		Functions\when( 'site_url' )->justReturn( 'https://site.example' );
 		$this->navigation = new AdminNavigation();
 	}
 
@@ -31,7 +32,7 @@ final class PluginTest extends TestCase {
 	private function api( string $version ): Api {
 		$template = new Template( __DIR__, $this->navigation, new NoticeBoard( array(), static function (): void {} ) );
 
-		return new Api( $version, $this->navigation, new ExtensionScreen( $template ) );
+		return new Api( $version, $this->navigation, new ExtensionScreen( $template ), static fn ( array $fields ): array => array() );
 	}
 
 	/** The menu's slugs. */

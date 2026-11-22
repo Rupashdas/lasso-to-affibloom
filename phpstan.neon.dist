@@ -9,6 +9,8 @@ parameters:
 	# Affibloom's extension API, from the Affibloom checkout beside this plugin.
 	scanDirectories:
 		- ../affibloom/src
+	scanFiles:
+		- tests/stubs/wp-cli.php
 	paths:
 		- affibloom-lasso-migrator.php
 		- src
