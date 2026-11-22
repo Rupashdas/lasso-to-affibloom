@@ -11,7 +11,7 @@ namespace AffibloomLassoMigrator\Domain\Conversion;
 
 /**
  * What a Lasso item becomes (Tasks LM2, LM3): Affibloom's Product box block with its attributes, `[affibloom …]`, or that
- * shortcode in a Shortcode block for a Lasso block Affibloom's block cannot hold whole (deviation 158).
+ * shortcode in a Shortcode block for a Lasso block Affibloom's block cannot hold whole (deviation 159).
  */
 final class AffibloomTarget {
 
@@ -49,7 +49,7 @@ final class AffibloomTarget {
 
 	/**
 	 * `[affibloom …]` in WordPress's Shortcode block (core/shortcode), for a Lasso block Affibloom's block cannot hold
-	 * whole (deviation 158).
+	 * whole (deviation 159).
 	 *
 	 * @param array<string, string> $attributes The shortcode's attributes.
 	 */

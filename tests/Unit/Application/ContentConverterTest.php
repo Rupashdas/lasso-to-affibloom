@@ -83,7 +83,7 @@ final class ContentConverterTest extends TestCase {
 		self::assertSame(
 			array(
 				'2622 block: convert | <!-- wp:affibloom/product-box {"type":"single","productId":22092,"overrides":{"badge":"Best"},"schemaPrice":"130.84"} /-->',
-				// Deviation 158 (the user, 2026-11-23): nothing is lost as [affibloom] in a shortcode block.
+				// Deviation 159 (the user, 2026-11-23): nothing is lost as [affibloom] in a shortcode block.
 				"2622 block: convert | <!-- wp:shortcode -->\n[affibloom id=\"22092\" rating=\"4.5\"]\n<!-- /wp:shortcode -->",
 				'2622 shortcode: convert | [affibloom id="22092" rating="4.5"]',
 				'9492 block: blocked | Lasso record 5 has no Affibloom product',

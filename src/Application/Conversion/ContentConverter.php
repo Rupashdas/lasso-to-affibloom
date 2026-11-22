@@ -179,7 +179,7 @@ final class ContentConverter {
 		}
 
 		// A box Affibloom's block cannot draw, or could not hold whole, becomes `[affibloom …]` in a shortcode block,
-		// which reads every attribute: nothing is lost (deviation 158, the user, 2026-11-23; F10 D16 as changed).
+		// which reads every attribute: nothing is lost (deviation 159, the user, 2026-11-23; F10 D16 as changed).
 		$block = $this->blocks->for_shortcode( $attributes );
 		if ( null === $block || array() !== $block['lost'] ) {
 			return AffibloomTarget::shortcode_block( $attributes );
