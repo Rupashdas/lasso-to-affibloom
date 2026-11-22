@@ -35,7 +35,7 @@ final class ContentConverterRunTest extends TestCase {
 	}
 
 	private function converter(): ContentConverter {
-		return new ContentConverter( array( $this->posts, $this->widgets ), ContentConverterTest::blocks(), static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ), new FakeAttributeParser(), $this->lock );
+		return new ContentConverter( array( $this->posts, $this->widgets ), ContentConverterTest::blocks(), static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ), new FakeAttributeParser(), $this->lock, ContentConverterTest::no_ai_texts() );
 	}
 
 	/**

@@ -45,8 +45,22 @@ final class ContentConverterTest extends TestCase {
 		};
 	}
 
+	/** No AI texts anywhere. */
+	public static function no_ai_texts(): \AffibloomLassoMigrator\Domain\Conversion\AiTexts {
+		return new class() implements \AffibloomLassoMigrator\Domain\Conversion\AiTexts {
+			public function affibloom( string $prompt, string $format ): ?string {
+				return null;
+			}
+			public function lasso( string $prompt, string $format ): ?string {
+				return null;
+			}
+			public function store( string $prompt, string $format, string $text ): void {
+			}
+		};
+	}
+
 	private function converter( FakeTextStore ...$stores ): ContentConverter {
-		return new ContentConverter( $stores, self::blocks(), static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ), new FakeAttributeParser(), new FakeConversionLock() );
+		return new ContentConverter( $stores, self::blocks(), static fn (): IdMaps => new IdMaps( array( 14722 => 22092 ) ), new FakeAttributeParser(), new FakeConversionLock(), ContentConverterTest::no_ai_texts() );
 	}
 
 	/**

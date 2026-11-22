@@ -33,6 +33,7 @@ use AffibloomLassoMigrator\Application\VariantsStep;
 use AffibloomLassoMigrator\Application\ViewsMapper;
 use AffibloomLassoMigrator\Application\ViewsStep;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAddresses;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAiTexts;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAmazon;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiBlocks;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
@@ -160,7 +161,7 @@ final class Plugin {
 		// Posts, widgets and Elementor's data (Tasks LM3, LM4).
 		$stores = array( new PostTexts( $source->settings()->list( 'cpt_support' ) ), new WidgetTexts(), new ElementorTexts() );
 
-		return new ContentConverter( $stores, new ApiBlocks( $api ), $maps->read( ... ), new WpAttributeParser(), new OptionConversionLock() );
+		return new ContentConverter( $stores, new ApiBlocks( $api ), $maps->read( ... ), new WpAttributeParser(), new OptionConversionLock(), new ApiAiTexts( $api ) );
 	}
 
 	/**

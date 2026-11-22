@@ -11,6 +11,7 @@ namespace AffibloomLassoMigrator\Application\Conversion;
 
 use AffibloomLassoMigrator\Domain\Conversion\AffibloomBlocks;
 use AffibloomLassoMigrator\Domain\Conversion\AffibloomTarget;
+use AffibloomLassoMigrator\Domain\Conversion\AiTexts;
 use AffibloomLassoMigrator\Domain\Conversion\AttributeParser;
 use AffibloomLassoMigrator\Domain\Conversion\Blocked;
 use AffibloomLassoMigrator\Domain\Conversion\ConversionLine;
@@ -40,8 +41,9 @@ final class ContentConverter {
 	 * @param Closure():IdMaps $maps    The migration's maps, read once per plan or run.
 	 * @param AttributeParser  $parser  Reads a shortcode's attributes as WordPress does.
 	 * @param ConversionLock   $lock    One run or revert at a time.
+	 * @param AiTexts          $ai      The AI text boxes' texts, in Lasso and in Affibloom (Task LM5).
 	 */
-	public function __construct( private array $stores, private AffibloomBlocks $blocks, private Closure $maps, private AttributeParser $parser, private ConversionLock $lock ) {}
+	public function __construct( private array $stores, private AffibloomBlocks $blocks, private Closure $maps, private AttributeParser $parser, private ConversionLock $lock, private AiTexts $ai ) {}
 
 	/**
 	 * One line per item, nothing written.
@@ -138,8 +140,14 @@ final class ContentConverter {
 		}
 
 		$after = LassoMarkup::rewrite( $text['text'], $converted['replacements'] );
-		if ( null !== $after && $store->write( $text['key'], $text['text'], $after ) ) {
-			return $lines;
+		if ( null !== $after ) {
+			// The AI texts the converted boxes show, from Lasso's cache, before the boxes are written (Task LM5).
+			foreach ( $converted['ai'] as [ $prompt, $format, $cached ] ) {
+				$this->ai->store( $prompt, $format, $cached );
+			}
+			if ( $store->write( $text['key'], $text['text'], $after ) ) {
+				return $lines;
+			}
 		}
 		$reason = null === $after ? "the text's Lasso items could not be matched; it was left as it was" : 'it did not save as written; it was left as it was';
 		foreach ( $written as $index ) {
@@ -155,11 +163,12 @@ final class ContentConverter {
 	 *
 	 * @param array{key: string, post: int, place: string, status: string, text: string} $text The text.
 	 * @param IdMaps                                                                     $maps The migration's maps.
-	 * @return array{lines: list<ConversionLine>, replacements: list<string|null>}
+	 * @return array{lines: list<ConversionLine>, replacements: list<string|null>, ai: list<array{string, string, string}>}
 	 */
 	private function convert( array $text, IdMaps $maps ): array {
 		$lines        = array();
 		$replacements = array();
+		$ai           = array();
 		foreach ( LassoMarkup::scan( $text['text'] ) as $found ) {
 			$item   = new LassoItem( $found['kind'], LassoItem::BLOCK === $found['kind'] ? (string) ( $found['block']['short_code'] ?? '' ) : $found['markup'], $this->parser->parse( $found['attributes'] ), $found['block'] );
 			$target = $this->target( $item, $maps );
@@ -170,11 +179,20 @@ final class ContentConverter {
 			}
 			$lines[]        = new ConversionLine( $text['post'], $text['place'], $text['status'], $item->kind, $item->markup, ConversionLine::CONVERT, $target->text(), '' );
 			$replacements[] = AffibloomTarget::BLOCK === $target->kind ? $this->blocks->markup( $target->attributes ) : $target->text();
+			if ( self::is_ai_text( $target->attributes ) ) {
+				$prompt = (string) $target->attributes['prompt'];
+				$format = (string) ( $target->attributes['format'] ?? '' );
+				$cached = null === $this->ai->affibloom( $prompt, $format ) ? $this->ai->lasso( $prompt, $format ) : null;
+				if ( null !== $cached ) {
+					$ai[] = array( $prompt, $format, $cached );
+				}
+			}
 		}
 
 		return array(
 			'lines'        => $lines,
 			'replacements' => $replacements,
+			'ai'           => $ai,
 		);
 	}
 
@@ -195,6 +213,10 @@ final class ContentConverter {
 		if ( $attributes instanceof Blocked ) {
 			return $attributes;
 		}
+		// An AI text box shows a cached text, Affibloom's or Lasso's (F31 R15; Task LM5); with neither it would show nothing.
+		if ( self::is_ai_text( $attributes ) && null === $this->ai->affibloom( $attributes['prompt'], $attributes['format'] ?? '' ) && null === $this->ai->lasso( $attributes['prompt'], $attributes['format'] ?? '' ) ) {
+			return new Blocked( 'its AI text has no cached text, in Lasso or in Affibloom, and Affibloom never asks a service for one (F30 D14): write it as text, or remove it' );
+		}
 		if ( LassoItem::SHORTCODE === $item->kind ) {
 			return AffibloomTarget::shortcode( $attributes );
 		}
@@ -207,5 +229,15 @@ final class ContentConverter {
 		}
 
 		return AffibloomTarget::block( $block['attributes'] );
+	}
+
+	/**
+	 * Whether a box is an AI text: a `prompt` and no product, group or table (F31 A9, R8).
+	 *
+	 * @param array<string, mixed> $attributes `[affibloom]`'s attributes.
+	 * @phpstan-assert-if-true array{prompt: string, format?: string} $attributes
+	 */
+	private static function is_ai_text( array $attributes ): bool {
+		return is_string( $attributes['prompt'] ?? null ) && '' !== trim( $attributes['prompt'] ) && array() === array_intersect_key( $attributes, array_flip( array( 'id', 'slug', 'group', 'amazon_url', 'geni_url' ) ) );
 	}
 }
