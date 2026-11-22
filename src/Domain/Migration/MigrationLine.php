@@ -25,6 +25,7 @@ final class MigrationLine {
 	 * @param Action $action What the migration does.
 	 * @param string $target What it becomes or points at in Affibloom.
 	 * @param string $note   Why, or what to know.
+	 * @param string $value  A setting's value in Lasso, as printed; '' for a record.
 	 */
 	public function __construct(
 		public readonly Family $family,
@@ -35,5 +36,6 @@ final class MigrationLine {
 		public readonly Action $action,
 		public readonly string $target = '',
 		public readonly string $note = '',
+		public readonly string $value = '',
 	) {}
 }

@@ -28,4 +28,9 @@ interface LassoSource {
 	 * @return list<LassoRecord>
 	 */
 	public function records( array $ids ): array;
+
+	/**
+	 * Lasso's settings and tracking-ID blacklist, the secret keys' values never kept (F10 D10).
+	 */
+	public function settings(): LassoSettings;
 }

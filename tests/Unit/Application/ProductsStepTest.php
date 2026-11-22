@@ -4,6 +4,7 @@ namespace AffibloomLassoMigrator\Tests\Unit\Application;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\ProductsStep;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
+use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Migration\Action;
 use AffibloomLassoMigrator\Domain\Migration\MigratedProducts;
@@ -40,6 +41,9 @@ final class ProductsStepTest extends TestCase {
 			}
 			public function records( array $ids ): array {
 				return array_values( array_filter( $this->records, static fn ( LassoRecord $r ): bool => in_array( $r->id, $ids, true ) ) );
+			}
+			public function settings(): LassoSettings {
+				return new LassoSettings( array() );
 			}
 		};
 		$migrated = new class( $map ) implements MigratedProducts {

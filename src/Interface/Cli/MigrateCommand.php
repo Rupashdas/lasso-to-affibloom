@@ -27,7 +27,7 @@ use WP_CLI\Utils;
 final class MigrateCommand {
 
 	/** The printed and reported columns. */
-	public const FIELDS = array( 'family', 'lasso_id', 'name', 'type', 'status', 'action', 'target', 'note' );
+	public const FIELDS = array( 'family', 'lasso_id', 'name', 'type', 'status', 'value', 'action', 'target', 'note' );
 
 	/**
 	 * Builds the command.
@@ -98,6 +98,10 @@ final class MigrateCommand {
 		$rows   = array_map( self::row( ... ), $report->lines );
 		if ( array() !== $rows ) {
 			Utils\format_items( $assoc_args['format'] ?? 'table', $rows, self::FIELDS );
+			// WP-CLI prints JSON without a line end; the summary starts on its own line.
+			if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
+				WP_CLI::line();
+			}
 		}
 		foreach ( $report->families as $family ) {
 			WP_CLI::line( self::summary( $report, $family ) );
@@ -123,6 +127,16 @@ final class MigrateCommand {
 	public static function summary( MigrationReport $report, Family $family ): string {
 		if ( ! $report->is_built( $family ) ) {
 			return sprintf( '%s: not built yet.', $family->value );
+		}
+		if ( Family::Settings === $family || Family::Display === $family ) {
+			return sprintf(
+				'%s: %d keys: %d to import, %d left, %d errors.',
+				$family->value,
+				count( $report->lines_of( $family ) ),
+				$report->count( $family, Action::Create ),
+				$report->count( $family, Action::Skip ),
+				$report->count( $family, Action::Error )
+			);
 		}
 		if ( Family::Products !== $family ) {
 			return sprintf( '%s: %d items.', $family->value, count( $report->lines_of( $family ) ) );
@@ -156,6 +170,7 @@ final class MigrateCommand {
 			'name'     => $line->name,
 			'type'     => $line->type,
 			'status'   => $line->status,
+			'value'    => $line->value,
 			'action'   => $line->action->value,
 			'target'   => $line->target,
 			'note'     => $line->note,

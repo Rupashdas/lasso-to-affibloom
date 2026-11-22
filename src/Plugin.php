@@ -10,9 +10,13 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator;
 
 use Affibloom\Extension\Api;
+use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\ProductsStep;
+use AffibloomLassoMigrator\Application\SettingsMapper;
+use AffibloomLassoMigrator\Application\SettingsStep;
+use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProductRules;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
@@ -91,8 +95,11 @@ final class Plugin {
 	 * @param Api $api Affibloom's extension API.
 	 */
 	private function migrate_command( Api $api ): MigrateCommand {
-		$steps = array(
-			new ProductsStep( new WpLassoSource(), new LassoRecordMapper( site_url() ), new LassoIdMap(), new ApiProductRules( $api ) ),
+		$source = new WpLassoSource();
+		$steps  = array(
+			new SettingsStep( Family::Settings, $source, new SettingsMapper() ),
+			new SettingsStep( Family::Display, $source, new DisplayMapper() ),
+			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), new ApiProductRules( $api ) ),
 		);
 
 		return new MigrateCommand( new MigrationService( $steps ), $this->lasso );

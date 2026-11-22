@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator\Infrastructure\Lasso;
 
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
+use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 
 /**
@@ -85,6 +86,23 @@ final class WpLassoSource implements LassoSource {
 		);
 
 		return array_map( 'intval', $ids );
+	}
+
+	/**
+	 * Lasso's settings option and tracking-ID blacklist. The secret keys keep their place but lose their value as
+	 * the option is read (F10 D10): nothing after this line can print or store them.
+	 */
+	public function settings(): LassoSettings {
+		$stored = get_option( 'lasso_settings', array() );
+		$stored = is_array( $stored ) ? $stored : array();
+		foreach ( LassoSettings::SECRETS as $secret ) {
+			if ( array_key_exists( $secret, $stored ) ) {
+				$stored[ $secret ] = null;
+			}
+		}
+		$blacklist = get_option( 'lasso_amazon_tracking_id_blacklist', array() );
+
+		return new LassoSettings( $stored, array_values( array_map( 'strval', array_filter( is_array( $blacklist ) ? $blacklist : array(), 'is_scalar' ) ) ) );
 	}
 
 	/**
