@@ -17,6 +17,7 @@ use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoAddress;
 use AffibloomLassoMigrator\Domain\Lasso\LassoIssues;
+use AffibloomLassoMigrator\Domain\Lasso\LassoOpportunities;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Lasso\LassoViews;
 
@@ -297,6 +298,45 @@ final class WpLassoSource implements LassoSource {
 		}
 
 		return array_map( static fn ( object $post ): LassoAddress => new LassoAddress( (int) $post->ID, (string) $post->post_name, (string) $post->post_status, (int) $post->cloak > 0, $old[ (int) $post->ID ] ?? array() ), $posts );
+	}
+
+	/**
+	 * Lasso's opportunity data (R18): `lasso_url_details.is_opportunity` per record, the `lasso_link_locations` rows
+	 * marked `is_ignored`, and the `lasso_link_updates` rows.
+	 */
+	public function opportunities(): LassoOpportunities {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's tables; no input.
+		$switches = array();
+		if ( $this->has_table( 'lasso_url_details' ) ) {
+			foreach ( $wpdb->get_results( "SELECT lasso_id, is_opportunity FROM {$wpdb->prefix}lasso_url_details ORDER BY lasso_id" ) as $row ) {
+				$switches[ (int) $row->lasso_id ] = '0' !== (string) $row->is_opportunity;
+			}
+		}
+		$dismissed = $this->has_table( 'lasso_link_locations' ) ? $wpdb->get_results( "SELECT DISTINCT post_id, link_slug FROM {$wpdb->prefix}lasso_link_locations WHERE is_ignored = 1 ORDER BY post_id" ) : array();
+		$updates   = $this->has_table( 'lasso_link_updates' ) ? $wpdb->get_results( "SELECT old_product_id, old_country, source_lasso_id, target_lasso_id FROM {$wpdb->prefix}lasso_link_updates ORDER BY id" ) : array();
+		// phpcs:enable
+
+		return new LassoOpportunities(
+			$switches,
+			array_map(
+				static fn ( object $row ): array => array(
+					'post' => (int) $row->post_id,
+					'url'  => (string) $row->link_slug,
+				),
+				$dismissed
+			),
+			array_map(
+				static fn ( object $row ): array => array(
+					'asin'    => (string) $row->old_product_id,
+					'country' => (string) $row->old_country,
+					'source'  => (int) $row->source_lasso_id,
+					'target'  => (int) $row->target_lasso_id,
+				),
+				$updates
+			)
+		);
 	}
 
 	/**

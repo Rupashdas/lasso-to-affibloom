@@ -87,4 +87,9 @@ interface LassoSource {
 	 * @return list<array<string, mixed>>
 	 */
 	public function tables(): array;
+
+	/**
+	 * Lasso's opportunity switches, dismissed links and retired-ASIN replacements.
+	 */
+	public function opportunities(): LassoOpportunities;
 }

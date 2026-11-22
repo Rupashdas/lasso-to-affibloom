@@ -18,6 +18,7 @@ use AffibloomLassoMigrator\Application\GroupsStep;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\IssuesStep;
 use AffibloomLassoMigrator\Application\LeftBehind;
+use AffibloomLassoMigrator\Application\OpportunitiesStep;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\ProductsStep;
 use AffibloomLassoMigrator\Application\SettingsMapper;
@@ -27,14 +28,13 @@ use AffibloomLassoMigrator\Application\TablesStep;
 use AffibloomLassoMigrator\Application\VariantsStep;
 use AffibloomLassoMigrator\Application\ViewsMapper;
 use AffibloomLassoMigrator\Application\ViewsStep;
-use AffibloomLassoMigrator\Application\WaitingStep;
-use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAddresses;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAmazon;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiFields;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiGroups;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiIssues;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiOpportunities;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiSettings;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiTables;
@@ -147,16 +147,9 @@ final class Plugin {
 			new VariantsStep( $source, $map, new ApiVariants( $api ), $log ),
 			new IssuesStep( $source, $map, new ApiIssues( $api ), $products, $log ),
 			new TablesStep( $source, $map, $products, new ApiTables( $api ), $log ),
+			new OpportunitiesStep( $source, $map, $products, new ApiOpportunities( $api ), $log ),
 			new ProductsStep( $source, new LassoRecordMapper( site_url() ), $map, $products, $products ),
 		);
-		// The families whose task is still to come (Task 25C): counted, with the task that moves them.
-		$waiting = array(
-			'opportunities' => '26N',
-		);
-		foreach ( $waiting as $family => $task ) {
-			$steps[] = new WaitingStep( Family::from( $family ), $data, $task );
-		}
-
 		return new MigrationService( $steps, $data, $log );
 	}
 
