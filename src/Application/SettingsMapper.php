@@ -41,7 +41,7 @@ final class SettingsMapper {
 		'general_performance_mode'             => array( 'performance_mode', 'string' ),
 		'lasso_permission'                     => array( 'permission', 'role' ),
 		'cpu_threshold'                        => array( 'cpu_threshold', 'int' ),
-		'cpt_support'                          => array( 'scan_post_types', 'list' ),
+		'cpt_support'                          => array( 'scan_post_types', 'extra_types' ),
 		'custom_fields_support'                => array( 'scan_custom_fields', 'list' ),
 		'general_disable_amazon_notifications' => array( 'disable_amazon_notice', 'bool' ),
 		'general_disable_tooltip'              => array( 'disable_help_tips', 'bool' ),
@@ -115,6 +115,9 @@ final class SettingsMapper {
 	/** Lasso's roles for its permission setting → Affibloom's (Permission). */
 	private const ROLES = array( 'administrator', 'editor', 'author', 'contributor', 'subscriber' );
 
+	/** The blacklist option's line key. */
+	public const BLACKLIST = 'lasso_amazon_tracking_id_blacklist';
+
 	/** Lasso's placeholder image, which lives in Lasso's folder. */
 	private const PLACEHOLDER = 'lasso-no-thumbnail';
 
@@ -135,6 +138,26 @@ final class SettingsMapper {
 		$lines[] = $this->blacklist( $settings );
 
 		return $lines;
+	}
+
+	/**
+	 * The Affibloom setting and value of every key that is carried, by Lasso key (the blacklist's key included): what
+	 * the settings family writes (Task 26C).
+	 *
+	 * @param LassoSettings $settings Lasso's settings.
+	 * @return array<string, array{0: string, 1: mixed}>
+	 */
+	public function targets( LassoSettings $settings ): array {
+		$targets = array();
+		foreach ( $settings->keys() as $key ) {
+			$target = DisplayMapper::owns( $key ) ? null : $this->target( $settings, $key );
+			if ( null !== $target ) {
+				$targets[ $key ] = $target;
+			}
+		}
+		$targets[ self::BLACKLIST ] = array( 'tracking_id_blacklist', $settings->blacklist );
+
+		return $targets;
 	}
 
 	/**
@@ -162,14 +185,34 @@ final class SettingsMapper {
 				? self::of( $key, $shown, Action::Skip, '', 'empty' )
 				: self::of( $key, $shown, Action::Create, 'custom_css', 'appended to custom_css, as Lasso adds it to the box CSS' );
 		}
+		$target = $this->target( $settings, $key );
+		if ( 'default_thumbnail' === $key && null === $target ) {
+			return self::of( $key, $shown, Action::Skip, '', "Lasso's own placeholder, inside its folder: Affibloom shows its own" );
+		}
+		if ( null === $target ) {
+			return self::of( $key, $shown, Action::Error, '', 'a Lasso setting the migrator does not know: check it by hand' );
+		}
+		$note = 'lasso_permission' === $key && ! in_array( strtolower( $settings->string( $key ) ), self::ROLES, true )
+			? 'not a role Lasso knows: administrators only, as Lasso reads it'
+			: ( 'custom_css' === $key && '' !== $settings->string( 'custom_css_default' ) ? "with Lasso's custom_css_default after it" : '' );
+
+		return self::of( $key, $shown, Action::Create, $target[0] . ' = ' . ValueText::of( $target[1] ), $note );
+	}
+
+	/**
+	 * A carried key's Affibloom setting and value, read as Lasso reads it; null for a key that is not carried.
+	 *
+	 * @param LassoSettings $settings Lasso's settings.
+	 * @param string        $key      The key.
+	 * @return array{0: string, 1: mixed}|null
+	 */
+	private function target( LassoSettings $settings, string $key ): ?array {
 		if ( 'default_thumbnail' === $key ) {
 			$image = $settings->string( $key );
-			return '' === $image || str_contains( $image, self::PLACEHOLDER )
-				? self::of( $key, $shown, Action::Skip, '', "Lasso's own placeholder, inside its folder: Affibloom shows its own" )
-				: self::of( $key, $shown, Action::Create, 'default_thumbnail = ' . $image );
+			return '' === $image || str_contains( $image, self::PLACEHOLDER ) ? null : array( 'default_thumbnail', $image );
 		}
 		if ( ! isset( self::MAPPED[ $key ] ) ) {
-			return self::of( $key, $shown, Action::Error, '', 'a Lasso setting the migrator does not know: check it by hand' );
+			return null;
 		}
 
 		list( $target, $kind ) = self::MAPPED[ $key ];
@@ -177,15 +220,21 @@ final class SettingsMapper {
 			'bool'   => $settings->bool( $key ),
 			'int'    => $settings->int( $key ),
 			'list'   => $settings->list( $key ),
+			// Affibloom always scans posts, pages and reusable blocks (HostQuery::TYPES); its setting holds the others.
+			'extra_types' => array_values( array_diff( $settings->list( $key ), array( 'post', 'page', 'wp_block' ) ) ),
 			'role'   => strtolower( $settings->string( $key ) ),
 			default  => $settings->string( $key ),
 		};
 		// Lasso fails closed: an empty or unknown role means administrators only (get_lasso_permission_level()).
 		if ( 'role' === $kind && ! in_array( $value, self::ROLES, true ) ) {
-			return self::of( $key, $shown, Action::Create, $target . ' = administrator', 'not a role Lasso knows: administrators only, as Lasso reads it' );
+			$value = 'administrator';
+		}
+		// Lasso adds custom_css_default after the site's custom CSS (class-helper.php 4474).
+		if ( 'custom_css' === $key && '' !== $settings->string( 'custom_css_default' ) ) {
+			$value = trim( $value . "\n\n" . $settings->string( 'custom_css_default' ) );
 		}
 
-		return self::of( $key, $shown, Action::Create, $target . ' = ' . ValueText::of( $value ) );
+		return array( $target, $value );
 	}
 
 	/**
@@ -194,7 +243,7 @@ final class SettingsMapper {
 	 * @param LassoSettings $settings Lasso's settings.
 	 */
 	private function blacklist( LassoSettings $settings ): MigrationLine {
-		$key  = 'lasso_amazon_tracking_id_blacklist';
+		$key  = self::BLACKLIST;
 		$own  = $settings->string( 'amazon_tracking_id' );
 		$note = '' !== $own && in_array( $own, $settings->blacklist, true ) ? "it lists the site's own tracking ID: check it by hand" : '';
 

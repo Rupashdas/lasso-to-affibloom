@@ -146,12 +146,15 @@ final class MigrateCommand {
 			return sprintf( $report->dry_run ? '%s: not built yet.' : '%s: its migration is not built yet; nothing was written.', $family->value );
 		}
 		if ( Family::Settings === $family || Family::Display === $family ) {
+			$kept = count( array_filter( $report->lines_of( $family ), static fn ( MigrationLine $line ): bool => Action::Skip === $line->action && str_starts_with( $line->note, 'Affibloom has' ) ) );
 			return sprintf(
-				'%s: %d keys: %d to import, %d left, %d errors.',
+				$report->dry_run ? '%s: %d keys: %d to import, %d unchanged, %d kept, %d left, %d errors.' : '%s: %d keys: %d imported, %d unchanged, %d kept, %d left, %d errors.',
 				$family->value,
 				count( $report->lines_of( $family ) ),
 				$report->count( $family, Action::Create ),
-				$report->count( $family, Action::Skip ),
+				$report->count( $family, Action::Unchanged ),
+				$kept,
+				$report->count( $family, Action::Skip ) - $kept,
 				$report->count( $family, Action::Error )
 			);
 		}

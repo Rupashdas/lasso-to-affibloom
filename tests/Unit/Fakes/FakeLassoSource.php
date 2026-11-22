@@ -16,8 +16,9 @@ final class FakeLassoSource implements LassoSource {
 	 *
 	 * @param list<LassoRecord> $records   The records, in Lasso's order.
 	 * @param LassoInventory    $inventory The counts.
+	 * @param LassoSettings     $settings  Lasso's settings.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ) ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ) ) {}
 
 	public function ids(): array {
 		return array_map( static fn ( LassoRecord $record ): int => $record->id, $this->records );
@@ -28,7 +29,7 @@ final class FakeLassoSource implements LassoSource {
 	}
 
 	public function settings(): LassoSettings {
-		return new LassoSettings( array() );
+		return $this->settings;
 	}
 
 	public function inventory(): LassoInventory {

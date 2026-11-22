@@ -7,7 +7,9 @@ use Affibloom\Application\Products\LinkResolver;
 use Affibloom\Application\Products\ProductInput;
 use Affibloom\Application\Products\ProductService;
 use Affibloom\Extension\Api;
+use Affibloom\Application\Settings\SettingsService;
 use Affibloom\Extension\ProductAccess;
+use Affibloom\Extension\SettingsAccess;
 use Affibloom\Interface\Admin\AdminNavigation;
 use Affibloom\Interface\Admin\ExtensionScreen;
 use Affibloom\Interface\Admin\NavItem;
@@ -52,7 +54,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ) );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ) );
 	}
 
 	/** The menu's slugs. */

@@ -47,4 +47,15 @@ final class OptionMigrationLog implements MigrationLog {
 		);
 		update_option( self::OPTION, $log, false );
 	}
+
+	/**
+	 * Whether the family ran before.
+	 *
+	 * @param Family $family The family.
+	 */
+	public function has_run( Family $family ): bool {
+		$log = get_option( self::OPTION, array() );
+
+		return is_array( $log ) && isset( $log['families'][ $family->value ] );
+	}
 }

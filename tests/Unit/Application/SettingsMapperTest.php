@@ -88,7 +88,7 @@ final class SettingsMapperTest extends TestCase {
 
 		self::assertSame( 'sponsored = false', $lines['enable_sponsored']->target );
 		self::assertSame( 'cpu_threshold = 80', $lines['cpu_threshold']->target );
-		self::assertSame( 'scan_post_types = ["post","page","wp_block"]', $lines['cpt_support']->target );
+		self::assertSame( 'scan_post_types = []', $lines['cpt_support']->target, 'Posts, pages and blocks are always scanned.' );
 		self::assertSame( 'tracking_id_whitelist = ["vbvault-20"]', $lines['amazon_tracking_id_whitelist']->target );
 		self::assertSame( 'permission = administrator', $lines['lasso_permission']->target );
 		self::assertStringStartsWith( 'disclosure_text = We earn a commission', $lines['disclosure_text']->target );

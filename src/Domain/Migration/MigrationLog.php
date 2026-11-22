@@ -23,4 +23,11 @@ interface MigrationLog {
 	 * @param int    $errors Its error lines.
 	 */
 	public function ran( Family $family, int $items, int $errors ): void;
+
+	/**
+	 * Whether the family ran before (the settings' first run writes, a later one only with --update, F10 D9).
+	 *
+	 * @param Family $family The family.
+	 */
+	public function has_run( Family $family ): bool;
 }
