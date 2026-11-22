@@ -11,6 +11,8 @@ namespace AffibloomLassoMigrator;
 
 use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\AmazonStep;
+use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
+use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
 use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\DisplayStep;
 use AffibloomLassoMigrator\Application\FieldsStep;
@@ -32,6 +34,7 @@ use AffibloomLassoMigrator\Application\ViewsMapper;
 use AffibloomLassoMigrator\Application\ViewsStep;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAddresses;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiAmazon;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiBlocks;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiFields;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiGroups;
@@ -46,11 +49,13 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiViews;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
+use AffibloomLassoMigrator\Infrastructure\WordPress\ContentHosts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
 use AffibloomLassoMigrator\Interface\Rest\MigrationController;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
+use AffibloomLassoMigrator\Interface\Cli\ConvertCommand;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 
 /**
@@ -132,6 +137,23 @@ final class Plugin {
 		( new ReportDownload( $migration, $api->capability() ) )->register();
 		add_filter( 'affibloom_setup_wanted', array( $this, 'setup_wanted' ) );
 		( new MigrateCommand( $migration, $this->lasso ) )->register();
+		// Task LM2: the conversion's dry run, built only for WP-CLI (it reads Lasso's settings).
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			( new ConvertCommand( $this->converter( $api ) ) )->register();
+		}
+	}
+
+	/**
+	 * The conversion of Lasso's content (Task LM2): the posts of the types Lasso scanned, Affibloom's block through its
+	 * API, and the migration's maps, read when a plan starts.
+	 *
+	 * @param Api $api Affibloom's extension API.
+	 */
+	private function converter( Api $api ): ContentConverter {
+		$source = new WpLassoSource();
+		$maps   = new MigrationMaps( new LassoIdMap(), new OptionMigrationLog( $this->lasso->version() ), $source, new ApiGroups( $api ) );
+
+		return new ContentConverter( new ContentHosts( $source->settings()->list( 'cpt_support' ) ), new ApiBlocks( $api ), $maps->read( ... ) );
 	}
 
 	/**

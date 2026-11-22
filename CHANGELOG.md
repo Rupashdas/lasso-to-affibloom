@@ -27,5 +27,6 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 - Migrate from Lasso runs the migration from the page, one family per request, with a lock and a resume (Task 26O).
 - `--only=locations` ("Original links"): each link Lasso's scan rewrote gets its original URL in Affibloom's link index, so a post's links can turn it back at render time; a link not indexed yet waits, an original Affibloom has is kept (Task 26Q).
 - Fixed: dismissed links were looked for in the Lasso record's ID instead of the post they are in (Task 26N).
+- `wp affibloom-lasso convert --dry-run [--post=<id>] [--format=<format>]`: every Lasso block, `[lasso …]` and `[lasso-attr …]` in posts, pages, reusable blocks and the types Lasso scanned, with the Affibloom block or `[affibloom …]` it becomes, or why it stays (an unknown product, group or table; something Affibloom's block cannot hold); nothing is written (Task LM2).
 
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.
