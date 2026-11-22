@@ -9,7 +9,10 @@ declare( strict_types=1 );
 
 namespace AffibloomLassoMigrator\Application;
 
+use AffibloomLassoMigrator\Domain\Migration\Action;
 use AffibloomLassoMigrator\Domain\Migration\Family;
+use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
+use AffibloomLassoMigrator\Domain\Migration\MigrationLog;
 use AffibloomLassoMigrator\Domain\Migration\MigrationReport;
 
 /**
@@ -28,10 +31,11 @@ final class MigrationService {
 	/**
 	 * Builds the service.
 	 *
-	 * @param list<Step>      $steps One step per family.
-	 * @param LeftBehind|null $data  Every kind of Lasso's data and its verdict (Task 25C).
+	 * @param list<Step>        $steps One step per family.
+	 * @param LeftBehind|null   $data  Every kind of Lasso's data and its verdict (Task 25C).
+	 * @param MigrationLog|null $log   When each family last ran (Task 26A).
 	 */
-	public function __construct( array $steps, private ?LeftBehind $data = null ) {
+	public function __construct( array $steps, private ?LeftBehind $data = null, private ?MigrationLog $log = null ) {
 		foreach ( $steps as $step ) {
 			$this->steps[ $step->family()->value ] = $step;
 		}
@@ -57,5 +61,27 @@ final class MigrationService {
 		$whole = count( Family::cases() ) === count( $families );
 
 		return new MigrationReport( $families, $lines, $not_built, $whole && null !== $this->data ? $this->data->items() : array() );
+	}
+
+	/**
+	 * The migration: each family whose run is built, in the fixed order; the others are reported as not built.
+	 *
+	 * @param list<Family> $families The families, in the fixed order.
+	 */
+	public function run( array $families ): MigrationReport {
+		$lines     = array();
+		$not_built = array();
+		foreach ( $families as $family ) {
+			$step = $this->steps[ $family->value ] ?? null;
+			if ( ! $step instanceof RunStep ) {
+				$not_built[] = $family;
+				continue;
+			}
+			$done = $step->run();
+			array_push( $lines, ...$done );
+			$this->log?->ran( $family, count( $done ), count( array_filter( $done, static fn ( MigrationLine $line ): bool => Action::Error === $line->action ) ) );
+		}
+
+		return new MigrationReport( $families, $lines, $not_built, array(), false );
 	}
 }

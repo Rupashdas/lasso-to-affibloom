@@ -23,6 +23,7 @@
   "autoload-dev": {
     "psr-4": {
       "AffibloomLassoMigrator\\Tests\\": "tests/",
+      "Affibloom\\Tests\\": "../affibloom/tests/",
       "Affibloom\\": "../affibloom/src/"
     }
   },

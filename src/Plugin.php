@@ -19,10 +19,11 @@ use AffibloomLassoMigrator\Application\SettingsMapper;
 use AffibloomLassoMigrator\Application\SettingsStep;
 use AffibloomLassoMigrator\Application\WaitingStep;
 use AffibloomLassoMigrator\Domain\Migration\Family;
-use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProductRules;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
+use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
@@ -110,12 +111,13 @@ final class Plugin {
 	 * @param Api $api Affibloom's extension API.
 	 */
 	private function migration( Api $api ): MigrationService {
-		$source = new WpLassoSource();
-		$data   = new LeftBehind( $source );
-		$steps  = array(
+		$source   = new WpLassoSource();
+		$data     = new LeftBehind( $source );
+		$products = new ApiProducts( $api );
+		$steps    = array(
 			new SettingsStep( Family::Settings, $source, new SettingsMapper() ),
 			new SettingsStep( Family::Display, $source, new DisplayMapper() ),
-			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), new ApiProductRules( $api ) ),
+			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), $products, $products ),
 		);
 		// The families whose task is still to come (Task 25C): counted, with the task that moves them.
 		$waiting = array(
@@ -133,7 +135,7 @@ final class Plugin {
 			$steps[] = new WaitingStep( Family::from( $family ), $data, $task );
 		}
 
-		return new MigrationService( $steps, $data );
+		return new MigrationService( $steps, $data, new OptionMigrationLog( $this->lasso->version() ) );
 	}
 
 	/**

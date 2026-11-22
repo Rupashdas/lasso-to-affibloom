@@ -2,11 +2,20 @@
 namespace AffibloomLassoMigrator\Tests\Unit;
 
 use Affibloom\Application\Shell\NoticeBoard;
+use Affibloom\Application\Products\LinkNormaliser;
+use Affibloom\Application\Products\LinkResolver;
+use Affibloom\Application\Products\ProductInput;
+use Affibloom\Application\Products\ProductService;
 use Affibloom\Extension\Api;
+use Affibloom\Extension\ProductAccess;
 use Affibloom\Interface\Admin\AdminNavigation;
 use Affibloom\Interface\Admin\ExtensionScreen;
 use Affibloom\Interface\Admin\NavItem;
 use Affibloom\Interface\Template;
+use Affibloom\Tests\Unit\Fakes\FakePageFetcher;
+use Affibloom\Tests\Unit\Fakes\InMemoryAmazonProducts;
+use Affibloom\Tests\Unit\Fakes\InMemoryProductRepository;
+use Affibloom\Tests\Unit\Fakes\InMemorySettingsRepository;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Plugin;
 use Brain\Monkey\Functions;
@@ -37,7 +46,13 @@ final class PluginTest extends TestCase {
 
 		$this->pages = new ExtensionScreen( $template );
 
-		return new Api( $version, $this->navigation, $this->pages, static fn ( array $fields ): array => array() );
+		$resolver = new LinkResolver( new FakePageFetcher() );
+		$settings = new InMemorySettingsRepository();
+		$links    = new LinkNormaliser( $resolver, $settings );
+		$products = new InMemoryProductRepository();
+		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
+
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ) );
 	}
 
 	/** The menu's slugs. */

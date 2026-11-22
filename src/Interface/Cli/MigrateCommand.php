@@ -22,9 +22,9 @@ use WP_CLI;
 use WP_CLI\Utils;
 
 /**
- * `wp affibloom-lasso migrate --dry-run [--only=<families>] [--report=<file.csv>] [--format=<format>]` (F10 D3, D18;
- * Task 25A): one line per Lasso item with what becomes of it, a summary per family, and nothing written. The run itself
- * (without --dry-run) comes with 26A.
+ * `wp affibloom-lasso migrate [--dry-run] [--only=<families>] [--report=<file.csv>] [--format=<format>]` (F10 D3, D18;
+ * Tasks 25A, 26A): one line per Lasso item with what becomes of it and a summary per family. With --dry-run nothing is
+ * written; without it, each family whose migration is built runs (products from 26A) and the others say so.
  */
 final class MigrateCommand {
 
@@ -46,12 +46,12 @@ final class MigrateCommand {
 	}
 
 	/**
-	 * Reports what moving from Lasso to Affibloom will do with every Lasso item.
+	 * Moves this site's Lasso data to Affibloom, or reports what that will do.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--dry-run]
-	 * : Report only; nothing is written. Needed for now: the run itself is not built yet.
+	 * : Report only; nothing is written.
 	 *
 	 * [--only=<families>]
 	 * : Comma-separated families: settings, display, fields, products, groups, slugs, variants, tables, issues, amazon,
@@ -74,15 +74,14 @@ final class MigrateCommand {
 	 *
 	 *     wp affibloom-lasso migrate --dry-run
 	 *     wp affibloom-lasso migrate --dry-run --only=products --report=migration.csv
+	 *     wp affibloom-lasso migrate --only=products
 	 *
 	 * @param list<string>          $args       Unused.
 	 * @param array<string, string> $assoc_args The options.
 	 */
 	public function __invoke( array $args, array $assoc_args ): void {
 		unset( $args );
-		if ( ! isset( $assoc_args['dry-run'] ) ) {
-			WP_CLI::error( 'Only the dry run is built yet: add --dry-run.' );
-		}
+		$dry_run = isset( $assoc_args['dry-run'] );
 		if ( ! $this->lasso->has_data() ) {
 			WP_CLI::success( 'No Lasso data found.' );
 			return;
@@ -93,7 +92,7 @@ final class MigrateCommand {
 			WP_CLI::error( $unknown->getMessage() );
 		}
 
-		$report = $this->migration->plan( $families );
+		$report = $dry_run ? $this->migration->plan( $families ) : $this->migration->run( $families );
 		$rows   = array_map( ReportCsv::line( ... ), $report->lines );
 		if ( array() !== $rows ) {
 			Utils\format_items( $assoc_args['format'] ?? 'table', $rows, ReportCsv::FIELDS );
@@ -116,11 +115,12 @@ final class MigrateCommand {
 			WP_CLI::line( sprintf( 'Report written to %s.', $assoc_args['report'] ) );
 		}
 
+		$done = $dry_run ? 'Nothing was written.' : "Done. Lasso's data was only read.";
 		if ( $report->has_errors() ) {
-			WP_CLI::warning( 'Some items have errors (see the error lines). Nothing was written.' );
+			WP_CLI::warning( 'Some items have errors (see the error lines). ' . $done );
 			WP_CLI::halt( 1 );
 		}
-		WP_CLI::success( 'Nothing was written.' );
+		WP_CLI::success( $done );
 	}
 
 	/**
@@ -131,7 +131,7 @@ final class MigrateCommand {
 	 */
 	public static function summary( MigrationReport $report, Family $family ): string {
 		if ( ! $report->is_built( $family ) ) {
-			return sprintf( '%s: not built yet.', $family->value );
+			return sprintf( $report->dry_run ? '%s: not built yet.' : '%s: its migration is not built yet; nothing was written.', $family->value );
 		}
 		if ( Family::Settings === $family || Family::Display === $family ) {
 			return sprintf(
@@ -152,6 +152,20 @@ final class MigrateCommand {
 		}
 		$lines     = $report->lines_of( $family );
 		$published = count( array_filter( $lines, static fn ( MigrationLine $line ): bool => 'publish' === $line->status ) );
+		if ( ! $report->dry_run ) {
+			return sprintf(
+				'products: %d records: %d created, %d skipped, %d retired, %d in the trash, %d unchanged (%d adopted), %d errors (%d published).',
+				count( $lines ),
+				$report->count( $family, Action::Create ),
+				$report->count( $family, Action::Skip ),
+				$report->count( $family, Action::Retire ),
+				$report->count( $family, Action::Trash ),
+				$report->count( $family, Action::Unchanged ),
+				count( array_filter( $lines, static fn ( MigrationLine $line ): bool => str_starts_with( $line->note, 'adopted' ) ) ),
+				$report->count( $family, Action::Error ),
+				$published
+			);
+		}
 
 		return sprintf(
 			'products: %d records: %d to create, %d skipped, %d to retire, %d to trash, %d already migrated, %d errors (%d published).',

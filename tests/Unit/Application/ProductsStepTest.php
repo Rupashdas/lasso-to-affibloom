@@ -3,73 +3,48 @@ namespace AffibloomLassoMigrator\Tests\Unit\Application;
 
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\ProductsStep;
-use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
-use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
-use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Migration\Action;
-use AffibloomLassoMigrator\Domain\Migration\MigratedProducts;
 use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
-use AffibloomLassoMigrator\Domain\Migration\ProductRules;
+use AffibloomLassoMigrator\Tests\Unit\Fakes\FakeAffibloom;
+use AffibloomLassoMigrator\Tests\Unit\Fakes\FakeIdMap;
+use AffibloomLassoMigrator\Tests\Unit\Fakes\FakeLassoSource;
 use AffibloomLassoMigrator\Tests\Unit\TestCase;
 use Brain\Monkey\Functions;
 
 /**
- * F10 R5, R6, D5-D7, D19 (Task 25A): one line per record, every status, with what becomes of it.
+ * F10 R5, R6, D1, D5-D7, D19, AC7, AC8 (Tasks 25A, 26A): one line per record, every status; the run makes what the dry
+ * run said, retired records after their targets, adopts the one-time import's products and changes nothing again.
  */
 final class ProductsStepTest extends TestCase {
+
+	private FakeAffibloom $affibloom;
+
+	private FakeIdMap $map;
 
 	protected function setUp(): void {
 		parent::setUp();
 		Functions\when( 'wp_parse_url' )->alias( 'parse_url' );
 		Functions\when( 'wp_strip_all_tags' )->alias( 'strip_tags' );
+		$this->affibloom = new FakeAffibloom();
+		$this->map       = new FakeIdMap();
 	}
 
 	/**
 	 * The step over these records.
 	 *
-	 * @param list<LassoRecord>     $records  Lasso's records.
-	 * @param array<int, list<int>> $map      Products by Lasso ID.
-	 * @param array<string, string> $refusals What Affibloom refuses in every product.
-	 * @return list<MigrationLine>
+	 * @param list<LassoRecord> $records Lasso's records.
 	 */
-	private static function plan( array $records, array $map = array(), array $refusals = array() ): array {
-		$source   = new class( $records ) implements LassoSource {
-			/** @param list<LassoRecord> $records */
-			public function __construct( private array $records ) {}
-			public function ids(): array {
-				return array_map( static fn ( LassoRecord $r ): int => $r->id, $this->records );
-			}
-			public function records( array $ids ): array {
-				return array_values( array_filter( $this->records, static fn ( LassoRecord $r ): bool => in_array( $r->id, $ids, true ) ) );
-			}
-			public function settings(): LassoSettings {
-				return new LassoSettings( array() );
-			}
-			public function inventory(): LassoInventory {
-				return new LassoInventory( array() );
-			}
-		};
-		$migrated = new class( $map ) implements MigratedProducts {
-			/** @param array<int, list<int>> $map */
-			public function __construct( private array $map ) {}
-			public function for_record( int $lasso_id ): array {
-				return $this->map[ $lasso_id ] ?? array();
-			}
-		};
-		$rules    = new class( $refusals ) implements ProductRules {
-			/** @param array<string, string> $refusals */
-			public function __construct( private array $refusals ) {}
-			public function refusals( array $fields ): array {
-				return $this->refusals;
-			}
-		};
-
-		return ( new ProductsStep( $source, new LassoRecordMapper( 'https://site.example' ), $migrated, $rules ) )->plan();
+	private function step( array $records ): ProductsStep {
+		return new ProductsStep( new FakeLassoSource( $records ), new LassoRecordMapper( 'https://site.example' ), $this->map, $this->affibloom, $this->affibloom );
 	}
 
 	private static function record( int $id, string $status = 'publish', array $meta = array( 'lasso_final_url' => 'https://c.example/' ), string $slug = '' ): LassoRecord {
-		return new LassoRecord( id: $id, title: "Record $id", status: $status, slug: $slug, meta: $meta );
+		return new LassoRecord( id: $id, title: "Record $id", status: $status, slug: $slug, date: '2024-01-0' . ( $id % 9 + 1 ) . ' 10:00:00', modified: '2025-01-01 10:00:00', meta: $meta );
+	}
+
+	private static function retired( int $id, int $to ): LassoRecord {
+		return self::record( $id, 'lasso_delete', array( 'lasso_final_url' => 'https://c.example/', 'lasso_repointed_to_lasso_id' => (string) $to ) );
 	}
 
 	/**
@@ -88,63 +63,92 @@ final class ProductsStepTest extends TestCase {
 	}
 
 	public function test_every_status_has_its_action(): void {
-		$lines = self::plan(
+		$lines = $this->step(
 			array(
 				self::record( 1 ),
 				self::record( 2, 'trash' ),
-				self::record( 3, 'lasso_delete', array( 'lasso_final_url' => 'https://c.example/', 'lasso_repointed_to_lasso_id' => '1' ) ),
+				self::retired( 3, 1 ),
 				self::record( 4, 'publish', array(), 'amzn-mizuno-b07xyz1234-shoe' ),
 				self::record( 5, 'draft' ),
 			)
-		);
+		)->plan();
 
-		self::assertSame(
-			array(
-				'1' => 'create',
-				'2' => 'trash',
-				'3' => 'retire',
-				'4' => 'skip',
-				'5' => 'skip',
-			),
-			self::actions( $lines )
-		);
+		self::assertSame( array( '1' => 'create', '2' => 'trash', '3' => 'retire', '4' => 'skip', '5' => 'skip' ), self::actions( $lines ) );
 		self::assertSame( 'Lasso #1', $lines[2]->target );
 		self::assertSame( 'no link; ASIN B07XYZ1234 in its slug', $lines[3]->note );
 		self::assertSame( 'other', $lines[0]->type );
-		self::assertSame( 'publish', $lines[0]->status );
-	}
-
-	public function test_a_record_that_has_a_product_is_unchanged_whatever_its_status(): void {
-		$lines = self::plan( array( self::record( 1 ), self::record( 2, 'trash' ) ), array( 1 => array( 40 ), 2 => array( 41 ) ) );
-
-		self::assertSame( array( '1' => 'unchanged', '2' => 'unchanged' ), self::actions( $lines ) );
-		self::assertSame( '#40', $lines[0]->target );
+		self::assertSame( array(), $this->affibloom->products, 'The dry run writes nothing.' );
 	}
 
 	public function test_a_retired_record_follows_its_pointer_through_retired_ones_and_stops_at_a_loop_or_a_missing_target(): void {
-		$retired = static fn ( int $id, int $to ): LassoRecord => self::record( $id, 'lasso_delete', array( 'lasso_final_url' => 'https://c.example/', 'lasso_repointed_to_lasso_id' => (string) $to ) );
-
-		$lines = self::plan( array( self::record( 1 ), $retired( 2, 3 ), $retired( 3, 1 ), $retired( 4, 5 ), $retired( 5, 4 ), $retired( 6, 99 ) ) );
+		$lines = $this->step( array( self::record( 1 ), self::retired( 2, 3 ), self::retired( 3, 1 ), self::retired( 4, 5 ), self::retired( 5, 4 ), self::retired( 6, 99 ) ) )->plan();
 
 		self::assertSame( 'Lasso #1', $lines[1]->target );
 		self::assertSame( 'Lasso #1', $lines[2]->target );
 		self::assertSame( '', $lines[3]->target );
 		self::assertSame( 'its target is missing: retired with no pointer', $lines[5]->note );
-		self::assertSame( Action::Retire, $lines[5]->action );
+	}
+
+	public function test_the_run_makes_each_product_with_its_dates_status_and_mark_and_retires_after_the_targets(): void {
+		// The retired record comes first in Lasso's order; its target's product must exist before it is retired.
+		$lines = $this->step( array( self::retired( 3, 1 ), self::record( 1 ), self::record( 2, 'trash' ), self::record( 4, 'publish', array() ) ) )->run();
+
+		self::assertSame( array( '3' => 'retire', '1' => 'create', '2' => 'trash', '4' => 'skip' ), self::actions( $lines ) );
+		$target = $this->map->for_record( 1 )[0];
+		$old    = $this->map->for_record( 3 )[0];
+		self::assertSame( 'publish', $this->affibloom->products[ $target ]['status'] );
+		self::assertSame( 'trash', $this->affibloom->products[ $this->map->for_record( 2 )[0] ]['status'] );
+		self::assertSame( 'retired', $this->affibloom->products[ $old ]['status'] );
+		self::assertSame( $target, $this->affibloom->products[ $old ]['to'] );
+		self::assertSame( '2024-01-02 10:00:00', $this->affibloom->products[ $target ]['created'] );
+		self::assertSame( '2025-01-01 10:00:00', $this->affibloom->products[ $old ]['modified'] ?? '', 'Dated again after it was retired.' );
+		self::assertNotNull( $this->map->mark( $target ) );
+		self::assertSame( '#' . $target, $lines[1]->target );
+	}
+
+	public function test_a_second_run_changes_nothing(): void {
+		$records = array( self::record( 1 ), self::record( 2, 'trash' ), self::retired( 3, 1 ) );
+		$this->step( $records )->run();
+		$written = $this->affibloom->products;
+
+		$again = $this->step( $records )->run();
+
+		self::assertSame( array( '1' => 'unchanged', '2' => 'unchanged', '3' => 'unchanged' ), self::actions( $again ) );
+		self::assertSame( $written, $this->affibloom->products );
+	}
+
+	public function test_the_one_time_import_s_product_is_adopted_once(): void {
+		$this->affibloom->products[40] = array(
+			'status'  => 'publish',
+			'fields'  => array( 'name' => 'Imported' ),
+			'to'      => 0,
+			'created' => '',
+		);
+		$this->map->map[1]             = array( 40 );
+
+		$first = $this->step( array( self::record( 1 ) ) )->run();
+		self::assertSame( 'adopted from the one-time import', $first[0]->note );
+		self::assertNotNull( $this->map->mark( 40 ) );
+
+		$second = $this->step( array( self::record( 1 ) ) )->run();
+		self::assertSame( '', $second[0]->note );
 	}
 
 	public function test_a_value_affibloom_refuses_is_an_error_line_and_the_rest_continue(): void {
-		$lines = self::plan( array( self::record( 1 ), self::record( 2 ) ), array(), array( 'url' => 'invalid_url' ) );
+		$this->affibloom->refuse_url = 'https://bad.example/';
+		$lines                       = $this->step( array( self::record( 1, 'publish', array( 'lasso_final_url' => 'https://bad.example/' ) ), self::record( 2 ) ) )->run();
 
-		self::assertSame( array( '1' => 'error', '2' => 'error' ), self::actions( $lines ) );
+		self::assertSame( array( '1' => 'error', '2' => 'create' ), self::actions( $lines ) );
 		self::assertSame( 'url: invalid_url', $lines[0]->note );
 	}
 
 	public function test_two_products_with_one_lasso_id_stop_the_family_naming_both(): void {
-		$lines = self::plan( array( self::record( 1 ), self::record( 2 ), self::record( 3 ) ), array( 2 => array( 40, 41 ) ) );
+		$this->map->map[2] = array( 40, 41 );
+		$lines             = $this->step( array( self::record( 1 ), self::record( 2 ), self::record( 3 ) ) )->run();
 
 		self::assertCount( 2, $lines );
 		self::assertSame( Action::Error, $lines[1]->action );
 		self::assertStringContainsString( '#40 and #41', $lines[1]->note );
+		self::assertCount( 1, $this->affibloom->products, 'Only the record before the stop was migrated.' );
 	}
 }
