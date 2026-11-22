@@ -302,7 +302,8 @@ final class WpLassoSource implements LassoSource {
 
 	/**
 	 * Lasso's opportunity data (R18): `lasso_url_details.is_opportunity` per record, the `lasso_link_locations` rows
-	 * marked `is_ignored`, and the `lasso_link_updates` rows.
+	 * marked `is_ignored` with the post they are in (`detection_id`; `post_id` is the Lasso record, F21 R1), and the
+	 * `lasso_link_updates` rows.
 	 */
 	public function opportunities(): LassoOpportunities {
 		global $wpdb;
@@ -314,7 +315,7 @@ final class WpLassoSource implements LassoSource {
 				$switches[ (int) $row->lasso_id ] = '0' !== (string) $row->is_opportunity;
 			}
 		}
-		$dismissed = $this->has_table( 'lasso_link_locations' ) ? $wpdb->get_results( "SELECT DISTINCT post_id, link_slug FROM {$wpdb->prefix}lasso_link_locations WHERE is_ignored = 1 ORDER BY post_id" ) : array();
+		$dismissed = $this->has_table( 'lasso_link_locations' ) ? $wpdb->get_results( "SELECT DISTINCT detection_id, link_slug FROM {$wpdb->prefix}lasso_link_locations WHERE is_ignored = 1 ORDER BY detection_id" ) : array();
 		$updates   = $this->has_table( 'lasso_link_updates' ) ? $wpdb->get_results( "SELECT old_product_id, old_country, source_lasso_id, target_lasso_id FROM {$wpdb->prefix}lasso_link_updates ORDER BY id" ) : array();
 		// phpcs:enable
 
@@ -322,7 +323,7 @@ final class WpLassoSource implements LassoSource {
 			$switches,
 			array_map(
 				static fn ( object $row ): array => array(
-					'post' => (int) $row->post_id,
+					'post' => (int) $row->detection_id,
 					'url'  => (string) $row->link_slug,
 				),
 				$dismissed
