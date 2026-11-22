@@ -95,6 +95,7 @@ final class LassoRecordMapperTest extends TestCase {
 				array(
 					'title'        => 'Amazon',
 					'product_type' => 'amazon',
+					'product_id'   => 'B0TEST0001',
 					'amazon'       => array(
 						'monetized_url'        => 'https://www.amazon.com/dp/B0TEST0001?tag=vv-20',
 						'latest_price'         => '$89.99',
@@ -111,6 +112,18 @@ final class LassoRecordMapperTest extends TestCase {
 		self::assertTrue( $fields['prime'] );
 		self::assertSame( 'Mizuno Wave Lightning', $fields['name'] );
 		self::assertSame( 'https://m.media-amazon.com/images/I/shoe.jpg', $fields['image_url'] );
+	}
+
+	public function test_every_amazon_record_shows_prime_as_lasso_s_box_does_whatever_its_cached_row_says(): void {
+		$amazon = static fn ( string $prime ): array => array(
+			'title'        => 'Shoe',
+			'product_type' => 'amazon',
+			'product_id'   => 'B0TEST0001',
+			'amazon'       => array( 'is_prime' => $prime ),
+		);
+
+		self::assertTrue( $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://www.amazon.com/dp/B0TEST0001' ), $amazon( '0' ) ) )['prime'] );
+		self::assertFalse( $this->mapper->fields( self::record( array( 'lasso_final_url' => 'https://shop.example/1' ), array( 'product_type' => 'other' ) ) )['prime'] );
 	}
 
 	public function test_another_store_s_cached_price_fills_an_empty_own_price_only(): void {

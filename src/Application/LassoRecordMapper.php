@@ -57,7 +57,9 @@ final class LassoRecordMapper {
 			'price'           => $this->price( $record, $cached ),
 			'description'     => $this->description( $record ),
 			'disclosure'      => $record->meta( 'disclosure_text' ),
-			'prime'           => $cached && 1 === (int) $record->amazon( 'is_prime' ),
+			// Lasso's box shows the Prime logo for every Amazon product while its setting is on, whatever the cached row
+			// says (`is_prime => enable_amazon_prime && amazon_id`); the setting moves with the settings family (26P).
+			'prime'           => $this->is_amazon( $record ) && '' !== trim( $record->product_id ),
 			'image_url'       => $image[0],
 			'image_id'        => $image[1],
 		);
