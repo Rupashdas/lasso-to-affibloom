@@ -74,4 +74,9 @@ interface LassoSource {
 	 * @return array<int, list<array{name: string, key: string, kind: string}>>
 	 */
 	public function variants(): array;
+
+	/**
+	 * Lasso's link issues and the issue bars editors closed.
+	 */
+	public function issues(): LassoIssues;
 }

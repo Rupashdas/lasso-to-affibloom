@@ -16,6 +16,7 @@ use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoAddress;
+use AffibloomLassoMigrator\Domain\Lasso\LassoIssues;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
 use AffibloomLassoMigrator\Domain\Lasso\LassoViews;
 
@@ -296,6 +297,29 @@ final class WpLassoSource implements LassoSource {
 		}
 
 		return array_map( static fn ( object $post ): LassoAddress => new LassoAddress( (int) $post->ID, (string) $post->post_name, (string) $post->post_status, (int) $post->cloak > 0, $old[ (int) $post->ID ] ?? array() ), $posts );
+	}
+
+	/**
+	 * Lasso's link issues (R16): every `lasso_url_issues` row, and the `dismiss_broken` / `dismiss_out_of_stock` times on
+	 * its records.
+	 */
+	public function issues(): LassoIssues {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's data.
+		$rows  = $this->has_table( 'lasso_url_issues' ) ? $wpdb->get_results( "SELECT id, issue_type, issue_slug, detection_date, issue_resolved, issue_resolved_dt FROM {$wpdb->prefix}lasso_url_issues ORDER BY id", ARRAY_A ) : array();
+		$metas = $wpdb->get_results( $wpdb->prepare( "SELECT m.post_id, m.meta_key, m.meta_value FROM {$wpdb->postmeta} m JOIN {$wpdb->posts} p ON p.ID = m.post_id AND p.post_type = %s WHERE m.meta_key IN ( 'dismiss_broken', 'dismiss_out_of_stock' )", self::POST_TYPE ) );
+		// phpcs:enable
+		$dismissals = array();
+		foreach ( $metas as $meta ) {
+			$dismissals[ (int) $meta->post_id ] ??= array(
+				'broken'       => 0,
+				'out-of-stock' => 0,
+			);
+			$dismissals[ (int) $meta->post_id ][ 'dismiss_broken' === $meta->meta_key ? 'broken' : 'out-of-stock' ] = (int) $meta->meta_value;
+		}
+
+		return new LassoIssues( array_map( static fn ( array $row ): array => array_map( 'strval', $row ), $rows ), $dismissals );
 	}
 
 	/**
