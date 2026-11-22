@@ -32,7 +32,7 @@ final class MigrationReportTest extends TestCase {
 			public function family(): Family {
 				return Family::Products;
 			}
-			public function plan(): array {
+			public function plan( bool $update = false, bool $force = false ): array {
 				return array(
 					new MigrationLine( Family::Products, '1', 'A', 'other', 'publish', Action::Create ),
 					new MigrationLine( Family::Products, '2', 'B', 'other', 'publish', Action::Create ),
@@ -56,7 +56,7 @@ final class MigrationReportTest extends TestCase {
 			public function family(): Family {
 				return Family::Products;
 			}
-			public function plan(): array {
+			public function plan( bool $update = false, bool $force = false ): array {
 				return array( new MigrationLine( Family::Products, '1', 'A', 'other', 'publish', Action::Error, '', 'url: invalid_url' ) );
 			}
 		};

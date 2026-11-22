@@ -20,7 +20,9 @@ interface RunStep extends Step {
 	/**
 	 * The migration: what was done with every item.
 	 *
+	 * @param bool $update Refresh what was migrated before (--update, F10 D8).
+	 * @param bool $force  Take Lasso's side where both sides changed (--force).
 	 * @return list<MigrationLine>
 	 */
-	public function run(): array;
+	public function run( bool $update = false, bool $force = false ): array;
 }

@@ -24,6 +24,13 @@ interface MigratedProducts {
 	public function for_record( int $lasso_id ): array;
 
 	/**
+	 * Every Lasso record that has a product, with its products (for the records deleted in Lasso since, Task 26B).
+	 *
+	 * @return array<int, list<int>>
+	 */
+	public function all(): array;
+
+	/**
 	 * Names the product's Lasso record and keeps its mark.
 	 *
 	 * @param int           $product  The product.

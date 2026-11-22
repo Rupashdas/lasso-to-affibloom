@@ -27,6 +27,10 @@ use InvalidArgumentException;
  * trashed one a product in the trash; a retired one a retired product pointing at its target's, made after the
  * targets. A value Affibloom refuses is an error line and the rest go on; two products with one Lasso ID stop the
  * family. The dry run and the run share each record's decision, so the run does what the dry run said.
+ *
+ * With --update (D8; Task 26B) a record changed in Lasso since its migration updates its product, unless the product
+ * was changed in Affibloom too: then it is kept and reported, and --force takes Lasso's side. A product no longer
+ * published in Affibloom is left as it is; a record deleted in Lasso is reported and its product kept.
  */
 final class ProductsStep implements RunStep {
 
@@ -54,19 +58,25 @@ final class ProductsStep implements RunStep {
 	/**
 	 * One line per Lasso record, nothing written.
 	 *
+	 * @param bool $update Refresh migrated products from Lasso (--update).
+	 * @param bool $force  Take Lasso's side where both changed (--force).
 	 * @return list<MigrationLine>
 	 */
-	public function plan(): array {
-		return array_map( static fn ( array $decision ): MigrationLine => $decision['line'], $this->decisions() );
+	public function plan( bool $update = false, bool $force = false ): array {
+		$decisions = $this->decisions( $update, $force );
+
+		return array_merge( array_map( static fn ( array $decision ): MigrationLine => $decision['line'], $decisions ), $update ? $this->deleted_in_lasso() : array() );
 	}
 
 	/**
 	 * The migration: published and trashed records first, then the retired ones, so their targets have products.
 	 *
+	 * @param bool $update Refresh migrated products from Lasso (--update).
+	 * @param bool $force  Take Lasso's side where both changed (--force).
 	 * @return list<MigrationLine>
 	 */
-	public function run(): array {
-		$decisions = $this->decisions();
+	public function run( bool $update = false, bool $force = false ): array {
+		$decisions = $this->decisions( $update, $force );
 		$lines     = array();
 		foreach ( $decisions as $key => $decision ) {
 			if ( Action::Retire !== $decision['line']->action ) {
@@ -80,15 +90,34 @@ final class ProductsStep implements RunStep {
 		}
 		ksort( $lines );
 
-		return array_values( $lines );
+		return array_merge( array_values( $lines ), $update ? $this->deleted_in_lasso() : array() );
+	}
+
+	/**
+	 * The records deleted in Lasso since their migration: reported, their products kept (Task 26B).
+	 *
+	 * @return list<MigrationLine>
+	 */
+	private function deleted_in_lasso(): array {
+		$present = array_flip( $this->source->ids() );
+		$lines   = array();
+		foreach ( $this->migrated->all() as $lasso_id => $products ) {
+			if ( ! isset( $present[ $lasso_id ] ) ) {
+				$lines[] = new MigrationLine( Family::Products, (string) $lasso_id, '', '', 'deleted', Action::Skip, '#' . implode( ', #', $products ), 'deleted in Lasso: its product is kept' );
+			}
+		}
+
+		return $lines;
 	}
 
 	/**
 	 * Each record's decision, in Lasso's order; the family stops at a record with two products.
 	 *
+	 * @param bool $update With --update.
+	 * @param bool $force  With --force.
 	 * @return list<array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}>
 	 */
-	private function decisions(): array {
+	private function decisions( bool $update, bool $force ): array {
 		$records = array();
 		foreach ( $this->source->records( $this->source->ids() ) as $record ) {
 			$records[ $record->id ] = $record;
@@ -101,7 +130,7 @@ final class ProductsStep implements RunStep {
 				$decisions[] = $this->decision( $record, Action::Error, null, sprintf( 'Lasso #%d has products %s: keep one, then run again.', $record->id, '#' . implode( ' and #', $products ) ) );
 				break;
 			}
-			$decisions[] = $this->decide( $record, $products[0] ?? 0, $records );
+			$decisions[] = $this->decide( $record, $products[0] ?? 0, $records, $update, $force );
 		}
 
 		return $decisions;
@@ -113,12 +142,14 @@ final class ProductsStep implements RunStep {
 	 * @param LassoRecord             $record  The record.
 	 * @param int                     $product Its product, 0 when it has none.
 	 * @param array<int, LassoRecord> $records Every record by ID, for a retired one's target.
+	 * @param bool                    $update  With --update.
+	 * @param bool                    $force   With --force.
 	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}
 	 */
-	private function decide( LassoRecord $record, int $product, array $records ): array {
+	private function decide( LassoRecord $record, int $product, array $records, bool $update, bool $force ): array {
 		$fields = $this->mapper->fields( $record );
 		if ( $product > 0 ) {
-			return $this->decision( $record, Action::Unchanged, $fields, '', '#' . $product, $product );
+			return $update && null !== $fields ? $this->refresh( $record, $product, $fields, $force ) : $this->decision( $record, Action::Unchanged, $fields, '', '#' . $product, $product );
 		}
 		if ( null === $fields ) {
 			$asin = preg_match( '/\b(b0[0-9a-z]{8})\b/i', str_replace( '-', ' ', $record->slug ), $found ) ? strtoupper( $found[1] ) : '';
@@ -148,6 +179,35 @@ final class ProductsStep implements RunStep {
 	}
 
 	/**
+	 * Whether a migrated product takes its record's new values (D8): only when Lasso changed the record since; not
+	 * when the product was changed in Affibloom too, unless --force; never for a product no longer published.
+	 *
+	 * @param LassoRecord          $record  The record.
+	 * @param int                  $product Its product.
+	 * @param array<string, mixed> $fields  The record's fields now.
+	 * @param bool                 $force   With --force.
+	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}
+	 */
+	private function refresh( LassoRecord $record, int $product, array $fields, bool $force ): array {
+		$mark = $this->migrated->mark( $product );
+		if ( null === $mark || MigrationMark::hash( $fields ) === $mark->given ) {
+			// Unmarked: the one-time import's product, adopted as it is by the run.
+			return $this->decision( $record, Action::Unchanged, $fields, '', '#' . $product, $product );
+		}
+		$current = $this->writer->fields( $product );
+		if ( null === $current ) {
+			return $this->decision( $record, Action::Unchanged, null, 'changed in Lasso, but its product is not published in Affibloom: left as it is', '#' . $product, $product );
+		}
+		if ( MigrationMark::hash( $current ) === $mark->stored ) {
+			return $this->decision( $record, Action::Update, $fields, 'changed in Lasso', '#' . $product, $product );
+		}
+
+		return $force
+			? $this->decision( $record, Action::Update, $fields, "changed on both sides: Lasso's values taken (--force)", '#' . $product, $product )
+			: $this->decision( $record, Action::Skip, null, "changed on both sides: Affibloom's edit kept (--force takes Lasso's)", '#' . $product, $product );
+	}
+
+	/**
 	 * Carries out a decision and says what was done.
 	 *
 	 * @param array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int} $decision The decision.
@@ -161,6 +221,15 @@ final class ProductsStep implements RunStep {
 			if ( null !== $fields && null === $this->migrated->mark( $decision['product'] ) ) {
 				$this->mark( $decision['product'], $record->id, $fields );
 				return $this->line( $record, Action::Unchanged, $line->target, 'adopted from the one-time import' );
+			}
+			return $line;
+		}
+		if ( Action::Update === $line->action && null !== $fields ) {
+			try {
+				$this->writer->update( $decision['product'], $fields );
+				$this->mark( $decision['product'], $record->id, $fields );
+			} catch ( InvalidArgumentException $refused ) {
+				return $this->line( $record, Action::Error, $line->target, $refused->getMessage() );
 			}
 			return $line;
 		}

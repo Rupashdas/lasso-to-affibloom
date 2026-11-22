@@ -39,9 +39,11 @@ final class WaitingStep implements Step {
 	/**
 	 * One line: found, and by which task.
 	 *
+	 * @param bool $update Unused: nothing was migrated before.
+	 * @param bool $force  Unused.
 	 * @return list<MigrationLine>
 	 */
-	public function plan(): array {
+	public function plan( bool $update = false, bool $force = false ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Step's signature; this family has no run yet.
 		$found = array_map( static fn ( DataItem $item ): string => sprintf( '%s %d', $item->name, $item->rows ), $this->data->of( $this->family ) );
 		$note  = sprintf( 'found %s', array() === $found ? 'nothing' : implode( ', ', $found ) );
 

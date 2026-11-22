@@ -45,7 +45,8 @@ final class FakeAffibloom implements ProductRules, ProductWriter {
 	}
 
 	public function fields( int $product ): ?array {
-		return $this->products[ $product ]['fields'] ?? null;
+		// Affibloom reads published products only.
+		return 'publish' === ( $this->products[ $product ]['status'] ?? '' ) ? $this->products[ $product ]['fields'] : null;
 	}
 
 	public function update( int $product, array $fields ): void {

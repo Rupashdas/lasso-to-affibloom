@@ -10,12 +10,15 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator\Domain\Migration;
 
 /**
- * What the migration does with one item (F10 D18). `update` joins with the task that needs it (26B).
+ * What the migration does with one item (F10 D18).
  */
 enum Action: string {
 
 	/** A new Affibloom item. */
 	case Create = 'create';
+
+	/** Changed in Lasso since its migration: its product takes the new values (D8; Task 26B). */
+	case Update = 'update';
 
 	/** Already migrated: nothing to do (D7). */
 	case Unchanged = 'unchanged';

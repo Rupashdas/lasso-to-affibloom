@@ -142,6 +142,73 @@ final class ProductsStepTest extends TestCase {
 		self::assertSame( 'url: invalid_url', $lines[0]->note );
 	}
 
+	/** The record's badge, as Lasso changes it. */
+	private static function badged( int $id, string $badge ): LassoRecord {
+		return self::record(
+			$id,
+			'publish',
+			array(
+				'lasso_final_url' => 'https://c.example/',
+				'badge_text'      => $badge,
+			)
+		);
+	}
+
+	public function test_update_takes_a_lasso_change_into_an_untouched_product(): void {
+		$this->step( array( self::badged( 1, 'Best' ) ) )->run();
+		$product = $this->map->for_record( 1 )[0];
+
+		$lines = $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true );
+
+		self::assertSame( Action::Update, $lines[0]->action );
+		self::assertSame( 'Top pick', $this->affibloom->products[ $product ]['fields']['badge'] );
+		self::assertSame( Action::Unchanged, $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true )[0]->action, 'Marked again: nothing more to do.' );
+	}
+
+	public function test_without_update_a_lasso_change_waits(): void {
+		$this->step( array( self::badged( 1, 'Best' ) ) )->run();
+
+		self::assertSame( Action::Unchanged, $this->step( array( self::badged( 1, 'Top pick' ) ) )->run()[0]->action );
+	}
+
+	public function test_an_affibloom_edit_alone_is_left_and_an_edit_on_both_sides_is_kept_unless_force(): void {
+		$this->step( array( self::badged( 1, 'Best' ) ) )->run();
+		$product = $this->map->for_record( 1 )[0];
+		$this->affibloom->products[ $product ]['fields']['badge'] = 'Edited';
+
+		self::assertSame( Action::Unchanged, $this->step( array( self::badged( 1, 'Best' ) ) )->run( true )[0]->action );
+
+		$kept = $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true );
+		self::assertSame( Action::Skip, $kept[0]->action );
+		self::assertStringStartsWith( 'changed on both sides', $kept[0]->note );
+		self::assertSame( 'Edited', $this->affibloom->products[ $product ]['fields']['badge'] );
+
+		$forced = $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true, true );
+		self::assertSame( Action::Update, $forced[0]->action );
+		self::assertSame( 'Top pick', $this->affibloom->products[ $product ]['fields']['badge'] );
+	}
+
+	public function test_update_leaves_a_product_no_longer_published_and_reports_a_record_deleted_in_lasso(): void {
+		$this->step( array( self::badged( 1, 'Best' ), self::record( 2 ) ) )->run();
+		$product                                       = $this->map->for_record( 1 )[0];
+		$this->affibloom->products[ $product ]['status'] = 'trash';
+
+		$lines = $this->step( array( self::badged( 1, 'Top pick' ) ) )->run( true );
+
+		self::assertSame( Action::Unchanged, $lines[0]->action );
+		self::assertSame( 'trash', $this->affibloom->products[ $product ]['status'] );
+		self::assertSame( '2', $lines[1]->key );
+		self::assertSame( 'deleted in Lasso: its product is kept', $lines[1]->note );
+	}
+
+	public function test_update_still_creates_new_records(): void {
+		$this->step( array( self::record( 1 ) ) )->run();
+
+		$lines = $this->step( array( self::record( 1 ), self::record( 2 ) ) )->run( true );
+
+		self::assertSame( array( '1' => 'unchanged', '2' => 'create' ), self::actions( $lines ) );
+	}
+
 	public function test_two_products_with_one_lasso_id_stop_the_family_naming_both(): void {
 		$this->map->map[2] = array( 40, 41 );
 		$lines             = $this->step( array( self::record( 1 ), self::record( 2 ), self::record( 3 ) ) )->run();

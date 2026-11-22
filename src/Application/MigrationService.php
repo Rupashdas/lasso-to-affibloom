@@ -45,8 +45,10 @@ final class MigrationService {
 	 * The dry run: what each family will do, nothing written; with every family, the verdict on all of Lasso's data.
 	 *
 	 * @param list<Family> $families The families, in the fixed order.
+	 * @param bool         $update   With --update (F10 D8).
+	 * @param bool         $force    With --force.
 	 */
-	public function plan( array $families ): MigrationReport {
+	public function plan( array $families, bool $update = false, bool $force = false ): MigrationReport {
 		$lines     = array();
 		$not_built = array();
 		foreach ( $families as $family ) {
@@ -54,21 +56,23 @@ final class MigrationService {
 				$not_built[] = $family;
 				continue;
 			}
-			array_push( $lines, ...$this->steps[ $family->value ]->plan() );
+			array_push( $lines, ...$this->steps[ $family->value ]->plan( $update, $force ) );
 		}
 
 		// Family::parse() gives each family once, so every family is asked for when the counts match.
 		$whole = count( Family::cases() ) === count( $families );
 
-		return new MigrationReport( $families, $lines, $not_built, $whole && null !== $this->data ? $this->data->items() : array() );
+		return new MigrationReport( $families, $lines, $not_built, $whole && null !== $this->data ? $this->data->items() : array(), true, $update );
 	}
 
 	/**
 	 * The migration: each family whose run is built, in the fixed order; the others are reported as not built.
 	 *
 	 * @param list<Family> $families The families, in the fixed order.
+	 * @param bool         $update   With --update (F10 D8).
+	 * @param bool         $force    With --force.
 	 */
-	public function run( array $families ): MigrationReport {
+	public function run( array $families, bool $update = false, bool $force = false ): MigrationReport {
 		$lines     = array();
 		$not_built = array();
 		foreach ( $families as $family ) {
@@ -77,11 +81,11 @@ final class MigrationService {
 				$not_built[] = $family;
 				continue;
 			}
-			$done = $step->run();
+			$done = $step->run( $update, $force );
 			array_push( $lines, ...$done );
 			$this->log?->ran( $family, count( $done ), count( array_filter( $done, static fn ( MigrationLine $line ): bool => Action::Error === $line->action ) ) );
 		}
 
-		return new MigrationReport( $families, $lines, $not_built, array(), false );
+		return new MigrationReport( $families, $lines, $not_built, array(), false, $update );
 	}
 }

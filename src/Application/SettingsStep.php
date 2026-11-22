@@ -38,9 +38,11 @@ final class SettingsStep implements Step {
 	/**
 	 * One line per key.
 	 *
+	 * @param bool $update Unused: nothing was migrated before.
+	 * @param bool $force  Unused.
 	 * @return list<MigrationLine>
 	 */
-	public function plan(): array {
+	public function plan( bool $update = false, bool $force = false ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Step's signature; this family has no run yet.
 		return $this->mapper->lines( $this->source->settings() );
 	}
 }

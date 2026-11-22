@@ -23,8 +23,9 @@ final class MigrationReport {
 	 * @param list<Family>        $not_built The families among them whose step does not exist yet.
 	 * @param list<DataItem>      $data      Every kind of Lasso's data and its verdict, when every family was planned.
 	 * @param bool                $dry_run   True for the dry run, false for a run that wrote.
+	 * @param bool                $update    True with --update (Task 26B).
 	 */
-	public function __construct( public readonly array $families, public readonly array $lines, public readonly array $not_built = array(), public readonly array $data = array(), public readonly bool $dry_run = true ) {}
+	public function __construct( public readonly array $families, public readonly array $lines, public readonly array $not_built = array(), public readonly array $data = array(), public readonly bool $dry_run = true, public readonly bool $update = false ) {}
 
 	/**
 	 * One family's lines.

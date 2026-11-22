@@ -47,6 +47,19 @@ final class LassoIdMap implements MigratedProducts {
 	}
 
 	/**
+	 * Every Lasso record that has a product, with its products.
+	 *
+	 * @return array<int, list<int>>
+	 */
+	public function all(): array {
+		if ( null === $this->map ) {
+			$this->map = $this->read();
+		}
+
+		return $this->map;
+	}
+
+	/**
 	 * Names the product's Lasso record and keeps its mark: the migrator's own meta on the product, which Finish removes.
 	 *
 	 * @param int           $product  The product.

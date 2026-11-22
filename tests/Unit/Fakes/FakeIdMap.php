@@ -19,6 +19,10 @@ final class FakeIdMap implements MigratedProducts {
 		return $this->map[ $lasso_id ] ?? array();
 	}
 
+	public function all(): array {
+		return $this->map;
+	}
+
 	public function link( int $product, int $lasso_id, MigrationMark $mark ): void {
 		if ( ! in_array( $product, $this->map[ $lasso_id ] ?? array(), true ) ) {
 			$this->map[ $lasso_id ][] = $product;

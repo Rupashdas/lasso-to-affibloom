@@ -22,9 +22,11 @@ use WP_CLI;
 use WP_CLI\Utils;
 
 /**
- * `wp affibloom-lasso migrate [--dry-run] [--only=<families>] [--report=<file.csv>] [--format=<format>]` (F10 D3, D18;
- * Tasks 25A, 26A): one line per Lasso item with what becomes of it and a summary per family. With --dry-run nothing is
- * written; without it, each family whose migration is built runs (products from 26A) and the others say so.
+ * `wp affibloom-lasso migrate [--dry-run] [--only=<families>] [--update [--force]] [--report=<file.csv>]
+ * [--format=<format>]` (F10 D3, D8, D18; Tasks 25A, 26A, 26B): one line per Lasso item with what becomes of it and a
+ * summary per family. With --dry-run nothing is written; without it, each family whose migration is built runs
+ * (products from 26A) and the others say so. --update refreshes what was migrated before from Lasso, keeping an
+ * Affibloom edit unless --force.
  */
 final class MigrateCommand {
 
@@ -57,6 +59,13 @@ final class MigrateCommand {
 	 * : Comma-separated families: settings, display, fields, products, groups, slugs, variants, tables, issues, amazon,
 	 * views, opportunities. Default: all, in that order.
 	 *
+	 * [--update]
+	 * : Also refresh what was migrated before: a record changed in Lasso since changes its product, unless the product was
+	 * changed in Affibloom too.
+	 *
+	 * [--force]
+	 * : With --update, take Lasso's values where both sides changed.
+	 *
 	 * [--report=<file>]
 	 * : Also write every line to this CSV file.
 	 *
@@ -75,6 +84,7 @@ final class MigrateCommand {
 	 *     wp affibloom-lasso migrate --dry-run
 	 *     wp affibloom-lasso migrate --dry-run --only=products --report=migration.csv
 	 *     wp affibloom-lasso migrate --only=products
+	 *     wp affibloom-lasso migrate --only=products --update
 	 *
 	 * @param list<string>          $args       Unused.
 	 * @param array<string, string> $assoc_args The options.
@@ -92,7 +102,9 @@ final class MigrateCommand {
 			WP_CLI::error( $unknown->getMessage() );
 		}
 
-		$report = $dry_run ? $this->migration->plan( $families ) : $this->migration->run( $families );
+		$update = isset( $assoc_args['update'] );
+		$force  = $update && isset( $assoc_args['force'] );
+		$report = $dry_run ? $this->migration->plan( $families, $update, $force ) : $this->migration->run( $families, $update, $force );
 		$rows   = array_map( ReportCsv::line( ... ), $report->lines );
 		if ( array() !== $rows ) {
 			Utils\format_items( $assoc_args['format'] ?? 'table', $rows, ReportCsv::FIELDS );
@@ -152,6 +164,23 @@ final class MigrateCommand {
 		}
 		$lines     = $report->lines_of( $family );
 		$published = count( array_filter( $lines, static fn ( MigrationLine $line ): bool => 'publish' === $line->status ) );
+		if ( $report->update ) {
+			$noted = static fn ( string $start ): int => count( array_filter( $lines, static fn ( MigrationLine $line ): bool => str_starts_with( $line->note, $start ) ) );
+			return sprintf(
+				$report->dry_run
+					? 'products: %d to create, %d to update, %d unchanged, %d changed on both sides (kept), %d deleted in Lasso (kept), %d skipped, %d to retire, %d to trash, %d errors.'
+					: 'products: %d created, %d updated, %d unchanged, %d changed on both sides (kept), %d deleted in Lasso (kept), %d skipped, %d retired, %d in the trash, %d errors.',
+				$report->count( $family, Action::Create ),
+				$report->count( $family, Action::Update ),
+				$report->count( $family, Action::Unchanged ),
+				$noted( 'changed on both sides: Affibloom' ),
+				$noted( 'deleted in Lasso' ),
+				$report->count( $family, Action::Skip ) - $noted( 'changed on both sides: Affibloom' ) - $noted( 'deleted in Lasso' ),
+				$report->count( $family, Action::Retire ),
+				$report->count( $family, Action::Trash ),
+				$report->count( $family, Action::Error )
+			);
+		}
 		if ( ! $report->dry_run ) {
 			return sprintf(
 				'products: %d records: %d created, %d skipped, %d retired, %d in the trash, %d unchanged (%d adopted), %d errors (%d published).',
