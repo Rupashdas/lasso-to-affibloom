@@ -115,7 +115,7 @@ final class ContentConverter {
 				$lines[] = $line( ConversionLine::LATER, $target->text(), 'bare shortcodes are converted with Task LM4' );
 			} else {
 				$written[]      = count( $lines );
-				$replacements[] = $this->blocks->markup( $target->attributes );
+				$replacements[] = AffibloomTarget::BLOCK === $target->kind ? $this->blocks->markup( $target->attributes ) : $target->text();
 				$lines[]        = $line( ConversionLine::CONVERT, $target->text(), '' );
 			}
 		}
@@ -178,12 +178,11 @@ final class ContentConverter {
 			return AffibloomTarget::shortcode( $attributes );
 		}
 
+		// A box Affibloom's block cannot draw, or could not hold whole, becomes `[affibloom …]` in a shortcode block,
+		// which reads every attribute: nothing is lost (deviation 158, the user, 2026-11-23; F10 D16 as changed).
 		$block = $this->blocks->for_shortcode( $attributes );
-		if ( null === $block ) {
-			return new Blocked( "Affibloom's block cannot draw this display" );
-		}
-		if ( array() !== $block['lost'] ) {
-			return new Blocked( "Affibloom's block cannot hold " . implode( ', ', $block['lost'] ) . ' (F10 D16)' );
+		if ( null === $block || array() !== $block['lost'] ) {
+			return AffibloomTarget::shortcode_block( $attributes );
 		}
 
 		return AffibloomTarget::block( $block['attributes'] );
