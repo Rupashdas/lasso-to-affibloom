@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace AffibloomLassoMigrator\Infrastructure\Lasso;
 
+use AffibloomLassoMigrator\Domain\Lasso\LassoAmazon;
 use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
 use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
@@ -223,6 +224,29 @@ final class WpLassoSource implements LassoSource {
 		// phpcs:enable
 
 		return $groups;
+	}
+
+	/**
+	 * Lasso's Amazon data (R17): the `lasso_amazon_products` rows a record's `lasso_url_details` names (Amazon type, its
+	 * ASIN and store), the per-country tracking IDs with a value, the other-store rows, and whether the Creators
+	 * credentials are set, a yes or no that never keeps their values. SELECTs only.
+	 */
+	public function amazon(): LassoAmazon {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's tables; no input.
+		$rows = array();
+		if ( $this->has_table( 'lasso_amazon_products' ) && $this->has_table( 'lasso_url_details' ) ) {
+			$rows = $wpdb->get_results( "SELECT DISTINCT a.* FROM {$wpdb->prefix}lasso_amazon_products a JOIN {$wpdb->prefix}lasso_url_details d ON d.product_type = 'amazon' AND d.product_id = a.amazon_id AND d.country = a.country ORDER BY a.amazon_id, a.country", ARRAY_A );
+		}
+		$tracking_ids = $this->has_table( 'lasso_amazon_tracking_ids' ) ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lasso_amazon_tracking_ids WHERE tracking_id <> ''" ) : 0;
+		$other_stores = $this->has_table( 'lasso_extend_products' ) ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lasso_extend_products" ) : 0;
+		// phpcs:enable
+		$settings = get_option( 'lasso_settings', array() );
+		$creators = is_array( $settings ) && '' !== trim( (string) ( $settings['amazon_creators_credential_id'] ?? '' ) );
+		unset( $settings );
+
+		return new LassoAmazon( array_map( static fn ( array $row ): array => array_map( 'strval', $row ), $rows ), $tracking_ids, $other_stores, $creators );
 	}
 
 	/**

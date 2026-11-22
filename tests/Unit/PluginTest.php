@@ -7,6 +7,7 @@ use Affibloom\Application\Products\LinkResolver;
 use Affibloom\Application\Products\ProductInput;
 use Affibloom\Application\Products\ProductService;
 use Affibloom\Application\Display\DisplaySettingsService;
+use Affibloom\Extension\AmazonAccess;
 use Affibloom\Extension\Api;
 use Affibloom\Application\Fields\FieldsService;
 use Affibloom\Extension\DisplayAccess;
@@ -64,7 +65,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ) );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ), new FieldAccess( new FieldsService( new InMemoryFieldRepository(), $products, new InMemoryFieldUsage( $products ) ) ), new GroupAccess( new GroupService( new InMemoryGroupRepository(), $products ) ), new AmazonAccess( new InMemoryAmazonProducts() ) );
 	}
 
 	/** The menu's slugs. */

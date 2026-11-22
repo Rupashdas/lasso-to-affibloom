@@ -49,6 +49,9 @@ final class LeftBehindTest extends TestCase {
 			public function groups(): array {
 				return array();
 			}
+			public function amazon(): \AffibloomLassoMigrator\Domain\Lasso\LassoAmazon {
+				return new \AffibloomLassoMigrator\Domain\Lasso\LassoAmazon();
+			}
 		};
 	}
 

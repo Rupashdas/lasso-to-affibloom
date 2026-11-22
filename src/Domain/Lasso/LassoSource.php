@@ -50,4 +50,9 @@ interface LassoSource {
 	 * @return list<LassoGroup>
 	 */
 	public function groups(): array;
+
+	/**
+	 * Lasso's Amazon data: the cached rows records use, counts, and whether Creators credentials are set.
+	 */
+	public function amazon(): LassoAmazon;
 }

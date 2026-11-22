@@ -1,6 +1,7 @@
 <?php
 namespace AffibloomLassoMigrator\Tests\Unit\Fakes;
 
+use AffibloomLassoMigrator\Domain\Lasso\LassoAmazon;
 use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
 use AffibloomLassoMigrator\Domain\Lasso\LassoGroup;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
@@ -21,8 +22,13 @@ final class FakeLassoSource implements LassoSource {
 	 * @param LassoSettings     $settings  Lasso's settings.
 	 * @param LassoFields       $fields    Lasso's custom fields.
 	 * @param list<LassoGroup>  $groups    Lasso's groups.
+	 * @param LassoAmazon       $amazon    Lasso's Amazon data.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon() ) {}
+
+	public function amazon(): LassoAmazon {
+		return $this->amazon;
+	}
 
 	public function groups(): array {
 		return $this->groups;
