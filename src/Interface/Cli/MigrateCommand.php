@@ -11,6 +11,7 @@ namespace AffibloomLassoMigrator\Interface\Cli;
 
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Domain\Migration\Action;
+use AffibloomLassoMigrator\Domain\Migration\DataItem;
 use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
 use AffibloomLassoMigrator\Domain\Migration\MigrationReport;
@@ -106,8 +107,14 @@ final class MigrateCommand {
 		foreach ( $report->families as $family ) {
 			WP_CLI::line( self::summary( $report, $family ) );
 		}
+		$data = array_map( self::data_row( ... ), $report->data );
+		if ( array() !== $data ) {
+			WP_CLI::line( "Lasso's data, and where it goes:" );
+			Utils\format_items( 'table', $data, array( 'data', 'rows', 'verdict' ) );
+			WP_CLI::line( self::left_summary( $report ) );
+		}
 		if ( isset( $assoc_args['report'] ) ) {
-			self::write_csv( $assoc_args['report'], $rows );
+			self::write_csv( $assoc_args['report'], array_merge( $rows, array_map( self::data_csv_row( ... ), $report->data ) ) );
 			WP_CLI::line( sprintf( 'Report written to %s.', $assoc_args['report'] ) );
 		}
 
@@ -138,6 +145,9 @@ final class MigrateCommand {
 				$report->count( $family, Action::Error )
 			);
 		}
+		if ( $report->count( $family, Action::Waiting ) > 0 ) {
+			return sprintf( '%s: %s.', $family->value, $report->lines_of( $family )[0]->note );
+		}
 		if ( Family::Products !== $family ) {
 			return sprintf( '%s: %d items.', $family->value, count( $report->lines_of( $family ) ) );
 		}
@@ -154,6 +164,58 @@ final class MigrateCommand {
 			$report->count( $family, Action::Unchanged ),
 			$report->count( $family, Action::Error ),
 			$published
+		);
+	}
+
+	/**
+	 * The closing count of what is left behind (AC5).
+	 *
+	 * @param MigrationReport $report The report.
+	 */
+	public static function left_summary( MigrationReport $report ): string {
+		$left    = array_filter( $report->data, static fn ( DataItem $item ): bool => $item->is_left() );
+		$unknown = count( array_filter( $report->data, static fn ( DataItem $item ): bool => ! $item->known ) );
+
+		return sprintf(
+			'Left behind: %d of %d kinds of Lasso data (%d rows)%s.',
+			count( $left ),
+			count( $report->data ),
+			array_sum( array_map( static fn ( DataItem $item ): int => $item->rows, $left ) ),
+			$unknown > 0 ? sprintf( '; %d tables the migrator does not know', $unknown ) : ''
+		);
+	}
+
+	/**
+	 * A kind of Lasso's data as printed.
+	 *
+	 * @param DataItem $item The item.
+	 * @return array<string, string>
+	 */
+	private static function data_row( DataItem $item ): array {
+		return array(
+			'data'    => $item->name,
+			'rows'    => (string) $item->rows,
+			'verdict' => null === $item->family ? ( $item->known ? 'left: ' : 'error: ' ) . $item->reason : 'moved by the ' . $item->family->value . ' family',
+		);
+	}
+
+	/**
+	 * A kind of Lasso's data as a report line (family `data`).
+	 *
+	 * @param DataItem $item The item.
+	 * @return array<string, string>
+	 */
+	private static function data_csv_row( DataItem $item ): array {
+		return array(
+			'family'   => 'data',
+			'lasso_id' => $item->name,
+			'name'     => '',
+			'type'     => '',
+			'status'   => '',
+			'value'    => (string) $item->rows,
+			'action'   => null !== $item->family ? 'moved' : ( $item->known ? 'left' : 'error' ),
+			'target'   => null === $item->family ? '' : $item->family->value,
+			'note'     => $item->reason,
 		);
 	}
 

@@ -21,8 +21,9 @@ final class MigrationReport {
 	 * @param list<Family>        $families  The families asked for, in order.
 	 * @param list<MigrationLine> $lines     Every item's line.
 	 * @param list<Family>        $not_built The families among them whose step does not exist yet.
+	 * @param list<DataItem>      $data      Every kind of Lasso's data and its verdict, when every family was planned.
 	 */
-	public function __construct( public readonly array $families, public readonly array $lines, public readonly array $not_built = array() ) {}
+	public function __construct( public readonly array $families, public readonly array $lines, public readonly array $not_built = array(), public readonly array $data = array() ) {}
 
 	/**
 	 * One family's lines.
@@ -59,6 +60,11 @@ final class MigrationReport {
 	public function has_errors(): bool {
 		foreach ( $this->lines as $line ) {
 			if ( Action::Error === $line->action ) {
+				return true;
+			}
+		}
+		foreach ( $this->data as $item ) {
+			if ( ! $item->known ) {
 				return true;
 			}
 		}

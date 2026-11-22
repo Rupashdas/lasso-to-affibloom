@@ -12,10 +12,12 @@ namespace AffibloomLassoMigrator;
 use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
+use AffibloomLassoMigrator\Application\LeftBehind;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\ProductsStep;
 use AffibloomLassoMigrator\Application\SettingsMapper;
 use AffibloomLassoMigrator\Application\SettingsStep;
+use AffibloomLassoMigrator\Application\WaitingStep;
 use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProductRules;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
@@ -96,13 +98,29 @@ final class Plugin {
 	 */
 	private function migrate_command( Api $api ): MigrateCommand {
 		$source = new WpLassoSource();
+		$data   = new LeftBehind( $source );
 		$steps  = array(
 			new SettingsStep( Family::Settings, $source, new SettingsMapper() ),
 			new SettingsStep( Family::Display, $source, new DisplayMapper() ),
 			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), new ApiProductRules( $api ) ),
 		);
+		// The families whose task is still to come (Task 25C): counted, with the task that moves them.
+		$waiting = array(
+			'fields'        => '26E',
+			'groups'        => '26F',
+			'slugs'         => '26G',
+			'variants'      => '26H',
+			'tables'        => '26I',
+			'issues'        => '26K',
+			'amazon'        => '26L',
+			'views'         => '26M',
+			'opportunities' => '26N',
+		);
+		foreach ( $waiting as $family => $task ) {
+			$steps[] = new WaitingStep( Family::from( $family ), $data, $task );
+		}
 
-		return new MigrateCommand( new MigrationService( $steps ), $this->lasso );
+		return new MigrateCommand( new MigrationService( $steps, $data ), $this->lasso );
 	}
 
 	/**

@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace AffibloomLassoMigrator\Infrastructure\Lasso;
 
+use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
@@ -69,6 +70,13 @@ final class WpLassoSource implements LassoSource {
 	private ?array $store_prices = null;
 
 	/**
+	 * The inventory, once counted.
+	 *
+	 * @var LassoInventory|null
+	 */
+	private ?LassoInventory $inventory = null;
+
+	/**
 	 * The IDs of every Lasso record, whatever its status (auto-drafts aside), oldest change first.
 	 *
 	 * @return list<int>
@@ -103,6 +111,55 @@ final class WpLassoSource implements LassoSource {
 		$blacklist = get_option( 'lasso_amazon_tracking_id_blacklist', array() );
 
 		return new LassoSettings( $stored, array_values( array_map( 'strval', array_filter( is_array( $blacklist ) ? $blacklist : array(), 'is_scalar' ) ) ) );
+	}
+
+	/**
+	 * How much of each kind of Lasso's data the site holds, counted once: every `{prefix}lasso_*` table with its rows,
+	 * and the counts of analysis B, C, E, G and H. COUNT queries only.
+	 */
+	public function inventory(): LassoInventory {
+		global $wpdb;
+
+		if ( null !== $this->inventory ) {
+			return $this->inventory;
+		}
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one-time counts of Lasso's data; a table name comes from SHOW TABLES and is quoted.
+		$tables = array();
+		foreach ( $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . 'lasso_' ) . '%' ) ) as $table ) {
+			$name = str_replace( '`', '', (string) $table );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- a table name from SHOW TABLES, backquoted; identifiers cannot be placeholders.
+			$tables[ substr( $name, strlen( $wpdb->prefix ) ) ] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$name`" );
+		}
+		$like   = static fn ( string $prefix ): string => $wpdb->esc_like( $prefix ) . '%';
+		$counts = array(
+			LassoInventory::OPTIONS     => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name NOT IN ( 'lasso_settings', 'lasso_amazon_tracking_id_blacklist' )", $like( 'lasso_' ) ) ),
+			LassoInventory::JOB_OPTIONS => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", $like( 'wp_lasso_' ) ) ),
+			LassoInventory::TRANSIENTS  => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $like( '_transient_lasso_' ), $like( '_site_transient_lasso_' ) ) ),
+			LassoInventory::RECORDS     => count( $this->ids() ),
+			LassoInventory::OLD_SLUGS   => $this->record_meta( array( 'lasso_old_slug', '_wp_old_slug' ) ),
+			LassoInventory::GROUPS      => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s", 'lasso-cat' ) ),
+			LassoInventory::SAVED_VIEWS => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_key = %s", 'lasso_dashboard_saved_views' ) ),
+			LassoInventory::DISMISSED   => $this->record_meta( array( 'dismiss_out_of_stock', 'dismiss_broken' ) ),
+			LassoInventory::CLOUD_META  => $this->record_meta( array( 'boosting_enabled', 'is_aff_plus', 'link_id', 'lasso_shortcode' ) ),
+			LassoInventory::USER_STATE  => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_key IN ( %s, %s )", 'lasso_dashboard_tour_done', 'lasso_dismiss_amazon_bulk_sync_banner_v2' ) ),
+		);
+		// phpcs:enable
+		$this->inventory = new LassoInventory( $tables, $counts );
+
+		return $this->inventory;
+	}
+
+	/**
+	 * How many of these meta keys Lasso's records hold with a value ('' and '0' are none).
+	 *
+	 * @param list<string> $keys Meta keys.
+	 */
+	private function record_meta( array $keys ): int {
+		global $wpdb;
+
+		$in = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- a one-time count; $in holds only %s placeholders, filled by prepare().
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} m JOIN {$wpdb->posts} p ON p.ID = m.post_id AND p.post_type = %s WHERE m.meta_value NOT IN ( '', '0' ) AND m.meta_key IN ( $in )", self::POST_TYPE, ...$keys ) );
 	}
 
 	/**

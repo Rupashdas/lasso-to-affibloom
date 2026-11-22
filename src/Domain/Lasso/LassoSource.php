@@ -33,4 +33,9 @@ interface LassoSource {
 	 * Lasso's settings and tracking-ID blacklist, the secret keys' values never kept (F10 D10).
 	 */
 	public function settings(): LassoSettings;
+
+	/**
+	 * How much of each kind of Lasso's data the site holds: every Lasso table with its rows, and the other counts.
+	 */
+	public function inventory(): LassoInventory;
 }

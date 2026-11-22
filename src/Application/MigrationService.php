@@ -28,16 +28,17 @@ final class MigrationService {
 	/**
 	 * Builds the service.
 	 *
-	 * @param list<Step> $steps One step per built family.
+	 * @param list<Step>      $steps One step per family.
+	 * @param LeftBehind|null $data  Every kind of Lasso's data and its verdict (Task 25C).
 	 */
-	public function __construct( array $steps ) {
+	public function __construct( array $steps, private ?LeftBehind $data = null ) {
 		foreach ( $steps as $step ) {
 			$this->steps[ $step->family()->value ] = $step;
 		}
 	}
 
 	/**
-	 * The dry run: what each family will do, nothing written.
+	 * The dry run: what each family will do, nothing written; with every family, the verdict on all of Lasso's data.
 	 *
 	 * @param list<Family> $families The families, in the fixed order.
 	 */
@@ -52,6 +53,9 @@ final class MigrationService {
 			array_push( $lines, ...$this->steps[ $family->value ]->plan() );
 		}
 
-		return new MigrationReport( $families, $lines, $not_built );
+		// Family::parse() gives each family once, so every family is asked for when the counts match.
+		$whole = count( Family::cases() ) === count( $families );
+
+		return new MigrationReport( $families, $lines, $not_built, $whole && null !== $this->data ? $this->data->items() : array() );
 	}
 }

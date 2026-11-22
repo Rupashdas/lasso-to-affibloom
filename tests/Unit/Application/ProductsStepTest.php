@@ -3,6 +3,7 @@ namespace AffibloomLassoMigrator\Tests\Unit\Application;
 
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\ProductsStep;
+use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
@@ -44,6 +45,9 @@ final class ProductsStepTest extends TestCase {
 			}
 			public function settings(): LassoSettings {
 				return new LassoSettings( array() );
+			}
+			public function inventory(): LassoInventory {
+				return new LassoInventory( array() );
 			}
 		};
 		$migrated = new class( $map ) implements MigratedProducts {
