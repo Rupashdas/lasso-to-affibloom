@@ -24,5 +24,6 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 - `--only=issues`: Lasso's link alerts and closed issue bars (Task 26K).
 - `--only=tables`: Lasso's comparison tables, whole (Task 26I).
 - `--only=opportunities`: Detect Opportunities switches, dismissed links and retired-ASIN replacements (Task 26N).
+- Migrate from Lasso runs the migration from the page, one family per request, with a lock and a resume (Task 26O).
 
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.

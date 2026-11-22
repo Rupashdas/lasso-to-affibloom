@@ -13,6 +13,8 @@ use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Domain\Migration\Action;
 use AffibloomLassoMigrator\Domain\Migration\DataItem;
 use AffibloomLassoMigrator\Domain\Migration\Family;
+use AffibloomLassoMigrator\Domain\Migration\MigrationLog;
+use AffibloomLassoMigrator\Interface\Rest\MigrationController;
 use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
 use AffibloomLassoMigrator\Domain\Migration\MigrationReport;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
@@ -34,13 +36,15 @@ final class MigrationScreen {
 	/**
 	 * Builds the screen.
 	 *
-	 * @param MigrationService $migration The migration.
-	 * @param LassoInstall     $lasso     Whether the site has Lasso's data, and its version.
-	 * @param string           $templates The migrator's templates/ folder.
-	 * @param string           $css_url   The page's stylesheet.
-	 * @param string           $version   The migrator's version, to bust caches.
+	 * @param MigrationService  $migration The migration.
+	 * @param LassoInstall      $lasso     Whether the site has Lasso's data, and its version.
+	 * @param string            $templates The migrator's templates/ folder.
+	 * @param string            $css_url   The page's stylesheet.
+	 * @param string            $version   The migrator's version, to bust caches.
+	 * @param string            $js_url    The page's script (Run migration, Task 26O); '' for none.
+	 * @param MigrationLog|null $log      Whether the products family ran, for "Update from Lasso".
 	 */
-	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version ) {}
+	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null ) {}
 
 	/**
 	 * Hooks into WordPress.
@@ -57,6 +61,9 @@ final class MigrationScreen {
 	public function enqueue( string $hook_suffix ): void {
 		if ( str_ends_with( $hook_suffix, self::SLUG ) ) {
 			wp_enqueue_style( 'affibloom-lasso-migrate', $this->css_url, array( 'affibloom-admin' ), $this->version );
+			if ( '' !== $this->js_url ) {
+				wp_enqueue_script( 'affibloom-lasso-migrate', $this->js_url, array(), $this->version, true );
+			}
 		}
 	}
 
@@ -75,6 +82,9 @@ final class MigrationScreen {
 				'lasso_version' => $this->lasso->version(),
 				'records'       => count( $report->lines_of( Family::Products ) ),
 				'download'      => wp_nonce_url( admin_url( 'admin-post.php?action=' . self::DOWNLOAD ), self::DOWNLOAD ),
+				'run_url'       => rest_url( MigrationController::NAMESPACE . '/run' ),
+				'nonce'         => wp_create_nonce( 'wp_rest' ),
+				'ran'           => null !== $this->log && $this->log->has_run( Family::Products ),
 				'cards'         => array_map( fn ( Family $family ): array => $this->card( $report, $family ), $report->families ),
 				'data'          => $report->data,
 				'left'          => array_values( array_filter( $report->data, static fn ( DataItem $item ): bool => $item->is_left() ) ),

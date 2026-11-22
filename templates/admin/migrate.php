@@ -47,6 +47,46 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 		<a class="affibloom-button affibloom-button--secondary" href="<?php echo esc_url( $view['download'] ); ?>"><?php esc_html_e( 'Download report (CSV)', 'affibloom-lasso-migrator' ); ?></a>
 	</div>
 
+	<?php // Task 26O: the run, one family per request, behind the backup tick. ?>
+	<div
+		class="affibloom-card affibloom-migrate__run"
+		data-affibloom-migrate-run="
+		<?php
+		echo esc_attr(
+			(string) wp_json_encode(
+				array(
+					'url'   => $view['run_url'],
+					'nonce' => $view['nonce'],
+					'names' => $family_names,
+					'texts' => array(
+						/* translators: 1: a family of data, such as "Products"; 2: how many families have run; 3: how many there are. */
+						'progress' => __( '%1$s done: %2$d of %3$d', 'affibloom-lasso-migrator' ),
+						'done'     => __( 'Migration finished. Reading the report again…', 'affibloom-lasso-migrator' ),
+						'failed'   => __( 'The run stopped. Press the button again to continue where it stopped.', 'affibloom-lasso-migrator' ),
+					),
+				)
+			)
+		);
+		?>
+		"
+	>
+		<div class="affibloom-migrate__intro-text">
+			<p class="affibloom-migrate__intro-title"><?php esc_html_e( 'Run the migration', 'affibloom-lasso-migrator' ); ?></p>
+			<p class="affibloom-migrate__intro-line"><?php esc_html_e( "Lasso's data is only read. Affibloom's is written, so take a backup of the database first.", 'affibloom-lasso-migrator' ); ?></p>
+			<label class="affibloom-migrate__backup">
+				<input type="checkbox" data-affibloom-migrate-backup>
+				<?php esc_html_e( 'I have a backup of this site’s database.', 'affibloom-lasso-migrator' ); ?>
+			</label>
+			<p class="affibloom-migrate__status" data-affibloom-migrate-status aria-live="polite"></p>
+		</div>
+		<div class="affibloom-migrate__run-actions">
+			<?php if ( $view['ran'] ) : ?>
+				<button type="button" class="affibloom-button affibloom-button--secondary" data-affibloom-migrate-start="update" disabled><?php esc_html_e( 'Update from Lasso', 'affibloom-lasso-migrator' ); ?></button>
+			<?php endif; ?>
+			<button type="button" class="affibloom-button affibloom-button--primary" data-affibloom-migrate-start="run" disabled><?php esc_html_e( 'Run migration', 'affibloom-lasso-migrator' ); ?></button>
+		</div>
+	</div>
+
 	<div class="affibloom-migrate__grid">
 		<?php foreach ( $view['cards'] as $card ) : ?>
 			<?php

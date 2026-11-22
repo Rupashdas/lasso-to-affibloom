@@ -19,6 +19,7 @@ use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\IssuesStep;
 use AffibloomLassoMigrator\Application\LeftBehind;
 use AffibloomLassoMigrator\Application\OpportunitiesStep;
+use AffibloomLassoMigrator\Application\MigrationRunner;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\ProductsStep;
 use AffibloomLassoMigrator\Application\SettingsMapper;
@@ -44,6 +45,8 @@ use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
+use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
+use AffibloomLassoMigrator\Interface\Rest\MigrationController;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
@@ -109,9 +112,13 @@ final class Plugin {
 			$this->lasso,
 			dirname( AFFIBLOOM_LASSO_MIGRATOR_FILE ) . '/templates',
 			plugins_url( 'assets/admin/migrate.css', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
-			AFFIBLOOM_LASSO_MIGRATOR_VERSION
+			AFFIBLOOM_LASSO_MIGRATOR_VERSION,
+			plugins_url( 'assets/admin/migrate.js', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
+			new OptionMigrationLog( $this->lasso->version() )
 		);
 		$screen->register();
+		// Task 26O: the page's run, one family per request.
+		( new MigrationController( new MigrationRunner( $migration, new OptionRunState() ), $api->capability() ) )->register();
 		// Task 25D: shown in the menu while Lasso's data exists; its address says so when it does not.
 		$api->add_page(
 			MigrationScreen::SLUG,

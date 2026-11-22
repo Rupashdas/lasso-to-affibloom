@@ -24,6 +24,31 @@
 }
 .affibloom-migrate__intro-line { margin: 4px 0 0; color: var(--affibloom-ink-700); font-size: 14px; line-height: 21px; }
 
+/* The run (Task 26O): the backup tick, the buttons and the progress line. */
+.affibloom-migrate__run {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px 24px;
+	padding: 20px var(--affibloom-space-card);
+}
+.affibloom-migrate__backup {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 24px;
+	margin-top: 12px;
+	color: var(--affibloom-ink-900);
+	font-size: 14px;
+	line-height: 21px;
+	cursor: pointer;
+}
+.affibloom-migrate__run-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.affibloom-migrate__status { margin: 8px 0 0; color: var(--affibloom-ink-700); font-size: 14px; line-height: 21px; }
+.affibloom-migrate__status:empty { display: none; }
+.affibloom-migrate__status--error { color: var(--affibloom-danger-700); }
+
 /* A card per family, three to a row on a wide screen, one on a phone. */
 .affibloom-migrate__grid {
 	display: grid;
