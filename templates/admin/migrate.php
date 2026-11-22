@@ -24,6 +24,7 @@ $family_names = array(
 	'amazon'        => __( 'Amazon', 'affibloom-lasso-migrator' ),
 	'views'         => __( 'Saved views', 'affibloom-lasso-migrator' ),
 	'opportunities' => __( 'Opportunities', 'affibloom-lasso-migrator' ),
+	'locations'     => __( 'Original links', 'affibloom-lasso-migrator' ),
 );
 $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $view['left'] ) );
 ?>

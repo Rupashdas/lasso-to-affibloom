@@ -341,6 +341,32 @@ final class WpLassoSource implements LassoSource {
 	}
 
 	/**
+	 * The links Lasso's scan rewrote (Task 26Q): `lasso_link_locations` rows whose `original_link_slug` differs from
+	 * `link_slug` but for a trailing slash, with the post they are in (`detection_id`; `post_id` is the Lasso record, F21
+	 * R1), once per post, link and original, in the post's order.
+	 *
+	 * @return list<array{post: int, url: string, original: string}>
+	 */
+	public function original_links(): array {
+		global $wpdb;
+
+		if ( ! $this->has_table( 'lasso_link_locations' ) ) {
+			return array();
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a one-time read of Lasso's table; no input.
+		$rows = $wpdb->get_results( "SELECT detection_id, link_slug, original_link_slug, MIN(id) AS first FROM {$wpdb->prefix}lasso_link_locations WHERE detection_id > 0 AND original_link_slug IS NOT NULL AND original_link_slug <> '' AND TRIM(TRAILING '/' FROM link_slug) <> TRIM(TRAILING '/' FROM original_link_slug) GROUP BY detection_id, link_slug, original_link_slug ORDER BY detection_id, first" );
+
+		return array_map(
+			static fn ( object $row ): array => array(
+				'post'     => (int) $row->detection_id,
+				'url'      => (string) $row->link_slug,
+				'original' => (string) $row->original_link_slug,
+			),
+			is_array( $rows ) ? $rows : array()
+		);
+	}
+
+	/**
 	 * Lasso's comparison tables (R14): `lasso_table_details`, its products from `lasso_table_mapping` in their order, its
 	 * field groups from `lasso_table_field_group` (by their order, then as stored) and each product's value per field
 	 * from `lasso_table_field_group_detail` in the table's groups.

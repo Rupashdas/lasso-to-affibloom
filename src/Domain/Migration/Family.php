@@ -14,7 +14,8 @@ use InvalidArgumentException;
 /**
  * A family of Lasso's data, migrated as one step (F10 D3), in the fixed order the migration runs them: settings first,
  * field definitions before the products whose values need them, the products before everything that points at them.
- * Clicks are not a family (decision E1: start from zero).
+ * Clicks are not a family (decision E1: start from zero). Lasso's original links come last: they need Affibloom's link
+ * index (Task 26Q).
  */
 enum Family: string {
 
@@ -30,6 +31,7 @@ enum Family: string {
 	case Amazon        = 'amazon';
 	case Views         = 'views';
 	case Opportunities = 'opportunities';
+	case Locations     = 'locations';
 
 	/**
 	 * The families named in `--only` (comma-separated), in the fixed order; every family when the list is empty.

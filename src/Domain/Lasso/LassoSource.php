@@ -92,4 +92,12 @@ interface LassoSource {
 	 * Lasso's opportunity switches, dismissed links and retired-ASIN replacements.
 	 */
 	public function opportunities(): LassoOpportunities;
+
+	/**
+	 * The links Lasso's scan rewrote, each with the post it is in, the link the content has now and the original
+	 * before the rewrite (`lasso_link_locations.original_link_slug`; Task 26Q), once per post and link.
+	 *
+	 * @return list<array{post: int, url: string, original: string}>
+	 */
+	public function original_links(): array;
 }

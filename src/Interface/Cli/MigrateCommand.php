@@ -57,7 +57,7 @@ final class MigrateCommand {
 	 *
 	 * [--only=<families>]
 	 * : Comma-separated families: settings, display, fields, products, groups, slugs, variants, tables, issues, amazon,
-	 * views, opportunities. Default: all, in that order.
+	 * views, opportunities, locations. Default: all, in that order.
 	 *
 	 * [--update]
 	 * : Also refresh what was migrated before: a record changed in Lasso since changes its product, unless the product was

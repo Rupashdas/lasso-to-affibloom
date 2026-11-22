@@ -33,11 +33,16 @@ final class FakeLassoSource implements LassoSource {
 	 * @param LassoIssues $issues Lasso's link issues and dismissals.
 	 * @param list<array<string, mixed>> $tables Lasso's comparison tables.
 	 * @param LassoOpportunities $opportunities Lasso's opportunity data.
+	 * @param list<array{post: int, url: string, original: string}> $original_links The links Lasso rewrote (Task 26Q).
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array(), private array $variants = array(), private LassoIssues $issues = new LassoIssues(), private array $tables = array(), private LassoOpportunities $opportunities = new LassoOpportunities() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array(), private array $variants = array(), private LassoIssues $issues = new LassoIssues(), private array $tables = array(), private LassoOpportunities $opportunities = new LassoOpportunities(), private array $original_links = array() ) {}
 
 	public function opportunities(): LassoOpportunities {
 		return $this->opportunities;
+	}
+
+	public function original_links(): array {
+		return $this->original_links;
 	}
 
 	public function tables(): array {

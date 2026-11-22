@@ -25,5 +25,7 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 - `--only=tables`: Lasso's comparison tables, whole (Task 26I).
 - `--only=opportunities`: Detect Opportunities switches, dismissed links and retired-ASIN replacements (Task 26N).
 - Migrate from Lasso runs the migration from the page, one family per request, with a lock and a resume (Task 26O).
+- `--only=locations` ("Original links"): each link Lasso's scan rewrote gets its original URL in Affibloom's link index, so a post's links can turn it back at render time; a link not indexed yet waits, an original Affibloom has is kept (Task 26Q).
+- Fixed: dismissed links were looked for in the Lasso record's ID instead of the post they are in (Task 26N).
 
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.

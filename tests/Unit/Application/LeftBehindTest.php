@@ -58,6 +58,9 @@ final class LeftBehindTest extends TestCase {
 			public function opportunities(): \AffibloomLassoMigrator\Domain\Lasso\LassoOpportunities {
 				return new \AffibloomLassoMigrator\Domain\Lasso\LassoOpportunities();
 			}
+			public function original_links(): array {
+				return array();
+			}
 			public function tables(): array {
 				return array();
 			}
