@@ -20,6 +20,7 @@ use AffibloomLassoMigrator\Application\SettingsMapper;
 use AffibloomLassoMigrator\Application\SettingsStep;
 use AffibloomLassoMigrator\Application\WaitingStep;
 use AffibloomLassoMigrator\Domain\Migration\Family;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiSettings;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
@@ -119,7 +120,7 @@ final class Plugin {
 		$log      = new OptionMigrationLog( $this->lasso->version() );
 		$steps    = array(
 			new SettingsStep( $source, new SettingsMapper(), new ApiSettings( $api ), $log ),
-			new DisplayStep( $source, new DisplayMapper() ),
+			new DisplayStep( $source, new DisplayMapper(), new ApiDisplay( $api ), $log ),
 			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), $products, $products ),
 		);
 		// The families whose task is still to come (Task 25C): counted, with the task that moves them.

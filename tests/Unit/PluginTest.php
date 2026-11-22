@@ -6,7 +6,9 @@ use Affibloom\Application\Products\LinkNormaliser;
 use Affibloom\Application\Products\LinkResolver;
 use Affibloom\Application\Products\ProductInput;
 use Affibloom\Application\Products\ProductService;
+use Affibloom\Application\Display\DisplaySettingsService;
 use Affibloom\Extension\Api;
+use Affibloom\Extension\DisplayAccess;
 use Affibloom\Application\Settings\SettingsService;
 use Affibloom\Extension\ProductAccess;
 use Affibloom\Extension\SettingsAccess;
@@ -16,6 +18,7 @@ use Affibloom\Interface\Admin\NavItem;
 use Affibloom\Interface\Template;
 use Affibloom\Tests\Unit\Fakes\FakePageFetcher;
 use Affibloom\Tests\Unit\Fakes\InMemoryAmazonProducts;
+use Affibloom\Tests\Unit\Fakes\InMemoryDisplaySettingsRepository;
 use Affibloom\Tests\Unit\Fakes\InMemoryProductRepository;
 use Affibloom\Tests\Unit\Fakes\InMemorySettingsRepository;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
@@ -54,7 +57,7 @@ final class PluginTest extends TestCase {
 		$products = new InMemoryProductRepository();
 		$service  = new ProductService( $products, $resolver, $settings, new ProductInput( $links ), $links, InMemoryAmazonProducts::without_amazon() );
 
-		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ) );
+		return new Api( $version, $this->navigation, $this->pages, new ProductAccess( $service, $products, static function (): void {} ), new SettingsAccess( new SettingsService( $settings ) ), new DisplayAccess( new DisplaySettingsService( new InMemoryDisplaySettingsRepository(), $settings ) ) );
 	}
 
 	/** The menu's slugs. */

@@ -44,6 +44,26 @@ final class DisplayMapper {
 	}
 
 	/**
+	 * Each type's Affibloom field and value, by line key (`theme_name.single`, `display_layout.columns`): what the
+	 * display family writes (Task 26D). The columns are the grid's.
+	 *
+	 * @param LassoSettings $settings Lasso's settings.
+	 * @return array<string, array{0: string, 1: string, 2: mixed}> Type, field, value.
+	 */
+	public function targets( LassoSettings $settings ): array {
+		$targets = array();
+		foreach ( self::PER_TYPE as $key => $field ) {
+			$read = $settings->display( $key );
+			foreach ( LassoSettings::TYPES as $type ) {
+				$targets[ $key . '.' . $type ] = array( $type, $field, $this->value( $settings, $key, $type, $read[ $type ] ?? null ) );
+			}
+		}
+		$targets['display_layout.columns'] = array( 'grid', 'columns', (int) ( $settings->display( 'display_layout' )['columns'] ?? 3 ) );
+
+		return $targets;
+	}
+
+	/**
 	 * One line per type and field, the grid's columns, then the flat keys and flags with why they are not carried alone.
 	 *
 	 * @param LassoSettings $settings Lasso's settings.
