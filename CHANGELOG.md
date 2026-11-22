@@ -20,5 +20,6 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 - `wp affibloom-lasso migrate --only=amazon`: the cached Amazon data of Lasso's products into Affibloom's store, unless Affibloom's own is as new; no secret is copied.
 - `--only=views`: saved Dashboard views, the tour flag and the closed education boxes (Task 26M).
 - `--only=slugs`: Lasso's cloaked addresses, old slugs and cloaking switches (Task 26G).
+- `--only=variants`: each record's URL variants, in Lasso's order (Task 26H).
 
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.

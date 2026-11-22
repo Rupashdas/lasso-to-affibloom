@@ -27,8 +27,13 @@ final class FakeLassoSource implements LassoSource {
 	 * @param LassoAmazon       $amazon    Lasso's Amazon data.
 	 * @param LassoViews        $views     Lasso's saved views, tour and boxes.
 	 * @param list<LassoAddress> $slugs    The records' addresses.
+	 * @param array<int, list<array{name: string, key: string, kind: string}>> $variants The records' variants.
 	 */
-	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array() ) {}
+	public function __construct( private array $records = array(), private LassoInventory $inventory = new LassoInventory( array() ), private LassoSettings $settings = new LassoSettings( array() ), private LassoFields $fields = new LassoFields(), private array $groups = array(), private LassoAmazon $amazon = new LassoAmazon(), private LassoViews $views = new LassoViews(), private array $slugs = array(), private array $variants = array() ) {}
+
+	public function variants(): array {
+		return $this->variants;
+	}
 
 	public function slugs(): array {
 		return $this->slugs;

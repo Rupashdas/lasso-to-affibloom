@@ -299,6 +299,31 @@ final class WpLassoSource implements LassoSource {
 	}
 
 	/**
+	 * Each record's URL variants (R15): `lasso_url_variants` rows in their stored order.
+	 *
+	 * @return array<int, list<array{name: string, key: string, kind: string}>>
+	 */
+	public function variants(): array {
+		global $wpdb;
+
+		if ( ! $this->has_table( 'lasso_url_variants' ) ) {
+			return array();
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time read of Lasso's table; no input.
+		$rows     = $wpdb->get_results( "SELECT parent_lasso_id, name, variant_key, variant_kind FROM {$wpdb->prefix}lasso_url_variants ORDER BY parent_lasso_id, id" );
+		$variants = array();
+		foreach ( $rows as $row ) {
+			$variants[ (int) $row->parent_lasso_id ][] = array(
+				'name' => (string) $row->name,
+				'key'  => (string) $row->variant_key,
+				'kind' => (string) $row->variant_kind,
+			);
+		}
+
+		return $variants;
+	}
+
+	/**
 	 * How many of these meta keys Lasso's records hold with a value ('' and '0' are none).
 	 *
 	 * @param list<string> $keys Meta keys.

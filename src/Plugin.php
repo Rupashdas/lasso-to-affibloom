@@ -22,6 +22,7 @@ use AffibloomLassoMigrator\Application\ProductsStep;
 use AffibloomLassoMigrator\Application\SettingsMapper;
 use AffibloomLassoMigrator\Application\SettingsStep;
 use AffibloomLassoMigrator\Application\SlugsStep;
+use AffibloomLassoMigrator\Application\VariantsStep;
 use AffibloomLassoMigrator\Application\ViewsMapper;
 use AffibloomLassoMigrator\Application\ViewsStep;
 use AffibloomLassoMigrator\Application\WaitingStep;
@@ -33,6 +34,7 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiFields;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiGroups;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiSettings;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiVariants;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiViews;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
@@ -138,11 +140,11 @@ final class Plugin {
 			new AmazonStep( $source, new ApiAmazon( $api ), $log ),
 			new ViewsStep( $source, new ViewsMapper(), new ApiViews( $api ), $log ),
 			new SlugsStep( $source, $map, new ApiAddresses( $api ), $log ),
+			new VariantsStep( $source, $map, new ApiVariants( $api ), $log ),
 			new ProductsStep( $source, new LassoRecordMapper( site_url() ), $map, $products, $products ),
 		);
 		// The families whose task is still to come (Task 25C): counted, with the task that moves them.
 		$waiting = array(
-			'variants'      => '26H',
 			'tables'        => '26I',
 			'issues'        => '26K',
 			'opportunities' => '26N',

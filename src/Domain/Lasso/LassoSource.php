@@ -67,4 +67,11 @@ interface LassoSource {
 	 * @return list<LassoAddress>
 	 */
 	public function slugs(): array;
+
+	/**
+	 * Each record's URL variants in Lasso's order, by Lasso ID: `{ name, key, kind }`.
+	 *
+	 * @return array<int, list<array{name: string, key: string, kind: string}>>
+	 */
+	public function variants(): array;
 }
