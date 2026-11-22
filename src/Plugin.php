@@ -12,6 +12,7 @@ namespace AffibloomLassoMigrator;
 use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\DisplayStep;
+use AffibloomLassoMigrator\Application\FieldsStep;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
 use AffibloomLassoMigrator\Application\LeftBehind;
 use AffibloomLassoMigrator\Application\MigrationService;
@@ -21,6 +22,7 @@ use AffibloomLassoMigrator\Application\SettingsStep;
 use AffibloomLassoMigrator\Application\WaitingStep;
 use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiFields;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiSettings;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
@@ -118,14 +120,15 @@ final class Plugin {
 		$data     = new LeftBehind( $source );
 		$products = new ApiProducts( $api );
 		$log      = new OptionMigrationLog( $this->lasso->version() );
+		$map      = new LassoIdMap();
 		$steps    = array(
 			new SettingsStep( $source, new SettingsMapper(), new ApiSettings( $api ), $log ),
 			new DisplayStep( $source, new DisplayMapper(), new ApiDisplay( $api ), $log ),
-			new ProductsStep( $source, new LassoRecordMapper( site_url() ), new LassoIdMap(), $products, $products ),
+			new FieldsStep( $source, new ApiFields( $api ), $map, $log ),
+			new ProductsStep( $source, new LassoRecordMapper( site_url() ), $map, $products, $products ),
 		);
 		// The families whose task is still to come (Task 25C): counted, with the task that moves them.
 		$waiting = array(
-			'fields'        => '26E',
 			'groups'        => '26F',
 			'slugs'         => '26G',
 			'variants'      => '26H',

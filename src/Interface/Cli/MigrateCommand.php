@@ -163,7 +163,16 @@ final class MigrateCommand {
 			return sprintf( '%s: %s; moved by %s.', $family->value, $line->note, $line->target );
 		}
 		if ( Family::Products !== $family ) {
-			return sprintf( '%s: %d items.', $family->value, count( $report->lines_of( $family ) ) );
+			return sprintf(
+				$report->dry_run ? '%s: %d items: %d to create, %d to update, %d unchanged, %d skipped, %d errors.' : '%s: %d items: %d created, %d updated, %d unchanged, %d skipped, %d errors.',
+				$family->value,
+				count( $report->lines_of( $family ) ),
+				$report->count( $family, Action::Create ),
+				$report->count( $family, Action::Update ),
+				$report->count( $family, Action::Unchanged ),
+				$report->count( $family, Action::Skip ),
+				$report->count( $family, Action::Error )
+			);
 		}
 		$lines     = $report->lines_of( $family );
 		$published = count( array_filter( $lines, static fn ( MigrationLine $line ): bool => 'publish' === $line->status ) );

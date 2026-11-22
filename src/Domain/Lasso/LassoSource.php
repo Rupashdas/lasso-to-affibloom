@@ -38,4 +38,9 @@ interface LassoSource {
 	 * How much of each kind of Lasso's data the site holds: every Lasso table with its rows, and the other counts.
 	 */
 	public function inventory(): LassoInventory;
+
+	/**
+	 * Lasso's custom fields: definitions, each record's values, "show field name".
+	 */
+	public function fields(): LassoFields;
 }

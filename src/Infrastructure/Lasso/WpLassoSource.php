@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace AffibloomLassoMigrator\Infrastructure\Lasso;
 
+use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoRecord;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
@@ -147,6 +148,51 @@ final class WpLassoSource implements LassoSource {
 		$this->inventory = new LassoInventory( $tables, $counts );
 
 		return $this->inventory;
+	}
+
+	/**
+	 * Lasso's custom fields (R12): `lasso_fields`, `lasso_field_mapping` in each record's `field_order`, and the
+	 * `Field_Mapping` rows of `lasso_metadata` (`show_field_name_<field>`), SELECTs only; missing tables read as empty.
+	 */
+	public function fields(): LassoFields {
+		global $wpdb;
+
+		$definitions = array();
+		$values      = array();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time reads of Lasso's tables; no input.
+		if ( $this->has_table( 'lasso_fields' ) ) {
+			foreach ( $wpdb->get_results( "SELECT id, field_name, field_type, field_description FROM {$wpdb->prefix}lasso_fields ORDER BY id", ARRAY_A ) as $row ) {
+				$definitions[] = array(
+					'id'          => (int) $row['id'],
+					'name'        => (string) $row['field_name'],
+					'type'        => (string) $row['field_type'],
+					'description' => (string) $row['field_description'],
+				);
+			}
+		}
+		$shown = array();
+		if ( $this->has_table( 'lasso_metadata' ) ) {
+			foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT object_id, meta_key, meta_value FROM {$wpdb->prefix}lasso_metadata WHERE type = %s", 'Field_Mapping' ), ARRAY_A ) as $row ) {
+				if ( 1 === preg_match( '/^show_field_name_(\\d+)$/', (string) $row['meta_key'], $found ) ) {
+					$shown[ (int) $row['object_id'] ][ (int) $found[1] ] = in_array( strtolower( (string) $row['meta_value'] ), array( '1', 'true' ), true );
+				}
+			}
+		}
+		if ( $this->has_table( 'lasso_field_mapping' ) ) {
+			foreach ( $wpdb->get_results( "SELECT lasso_id, field_id, field_value, field_visible FROM {$wpdb->prefix}lasso_field_mapping ORDER BY lasso_id, field_order, field_id", ARRAY_A ) as $row ) {
+				$lasso_id              = (int) $row['lasso_id'];
+				$field                 = (int) $row['field_id'];
+				$values[ $lasso_id ][] = array(
+					'field'     => $field,
+					'value'     => (string) $row['field_value'],
+					'visible'   => 1 === (int) $row['field_visible'],
+					'show_name' => $shown[ $lasso_id ][ $field ] ?? false,
+				);
+			}
+		}
+		// phpcs:enable
+
+		return new LassoFields( $definitions, $values );
 	}
 
 	/**

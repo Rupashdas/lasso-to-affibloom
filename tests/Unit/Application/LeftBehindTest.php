@@ -4,6 +4,7 @@ namespace AffibloomLassoMigrator\Tests\Unit\Application;
 use AffibloomLassoMigrator\Application\LeftBehind;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\WaitingStep;
+use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSource;
@@ -41,6 +42,9 @@ final class LeftBehindTest extends TestCase {
 			}
 			public function inventory(): LassoInventory {
 				return $this->inventory;
+			}
+			public function fields(): LassoFields {
+				return new LassoFields();
 			}
 		};
 	}

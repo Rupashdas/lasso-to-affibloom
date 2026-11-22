@@ -30,4 +30,21 @@ interface MigrationLog {
 	 * @param Family $family The family.
 	 */
 	public function has_run( Family $family ): bool;
+
+	/**
+	 * One of the migration's ID maps (`field_map`, …): Lasso's ID → Affibloom's.
+	 *
+	 * @param string $name The map.
+	 * @return array<int, int>
+	 */
+	public function map( string $name ): array;
+
+	/**
+	 * Adds a pair to one of the ID maps.
+	 *
+	 * @param string $name The map.
+	 * @param int    $from Lasso's ID.
+	 * @param int    $to   Affibloom's.
+	 */
+	public function remember( string $name, int $from, int $to ): void;
 }

@@ -19,4 +19,15 @@ final class FakeLog implements MigrationLog {
 	public function has_run( Family $family ): bool {
 		return isset( $this->ran[ $family->value ] );
 	}
+
+	/** The ID maps. @var array<string, array<int, int>> */
+	public array $maps = array();
+
+	public function map( string $name ): array {
+		return $this->maps[ $name ] ?? array();
+	}
+
+	public function remember( string $name, int $from, int $to ): void {
+		$this->maps[ $name ][ $from ] = $to;
+	}
 }

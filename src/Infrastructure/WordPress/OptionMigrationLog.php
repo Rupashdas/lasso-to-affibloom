@@ -14,7 +14,8 @@ use AffibloomLassoMigrator\Domain\Migration\MigrationLog;
 
 /**
  * The migration's log in the option `affibloom_lasso_migration` (not autoloaded: only the migrator reads it), `{
- * lasso_version, families: { <family>: { items, errors, at } } }`. It goes with Finish (LM10).
+ * lasso_version, families: { <family>: { items, errors, at } }, field_map: { <Lasso ID>: <Affibloom ID> } }`. It goes
+ * with Finish (LM10).
  */
 final class OptionMigrationLog implements MigrationLog {
 
@@ -57,5 +58,32 @@ final class OptionMigrationLog implements MigrationLog {
 		$log = get_option( self::OPTION, array() );
 
 		return is_array( $log ) && isset( $log['families'][ $family->value ] );
+	}
+
+	/**
+	 * One of the ID maps.
+	 *
+	 * @param string $name The map.
+	 * @return array<int, int>
+	 */
+	public function map( string $name ): array {
+		$log = get_option( self::OPTION, array() );
+		$map = is_array( $log ) && isset( $log[ $name ] ) && is_array( $log[ $name ] ) ? $log[ $name ] : array();
+
+		return array_map( 'intval', $map );
+	}
+
+	/**
+	 * Adds a pair to one of the ID maps.
+	 *
+	 * @param string $name The map.
+	 * @param int    $from Lasso's ID.
+	 * @param int    $to   Affibloom's.
+	 */
+	public function remember( string $name, int $from, int $to ): void {
+		$log                   = get_option( self::OPTION, array() );
+		$log                   = is_array( $log ) ? $log : array();
+		$log[ $name ][ $from ] = $to;
+		update_option( self::OPTION, $log, false );
 	}
 }
