@@ -9,3 +9,4 @@
 require dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
 define( 'AFFIBLOOM_LASSO_MIGRATOR_FILE', dirname( __DIR__, 2 ) . '/affibloom-lasso-migrator.php' );
+define( 'AFFIBLOOM_LASSO_MIGRATOR_VERSION', '0.0.0-test' );

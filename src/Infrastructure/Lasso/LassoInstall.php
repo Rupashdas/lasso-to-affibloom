@@ -24,4 +24,13 @@ final class LassoInstall {
 	public function has_data(): bool {
 		return false !== get_option( self::VERSION_OPTION, false );
 	}
+
+	/**
+	 * The Lasso version whose data the site holds, '' when none (the report names it, analysis O1).
+	 */
+	public function version(): string {
+		$version = get_option( self::VERSION_OPTION, '' );
+
+		return is_scalar( $version ) ? (string) $version : '';
+	}
 }

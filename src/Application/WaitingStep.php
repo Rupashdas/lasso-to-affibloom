@@ -43,8 +43,8 @@ final class WaitingStep implements Step {
 	 */
 	public function plan(): array {
 		$found = array_map( static fn ( DataItem $item ): string => sprintf( '%s %d', $item->name, $item->rows ), $this->data->of( $this->family ) );
-		$note  = sprintf( 'found %s; moved by Task %s', array() === $found ? 'nothing' : implode( ', ', $found ), $this->task );
+		$note  = sprintf( 'found %s', array() === $found ? 'nothing' : implode( ', ', $found ) );
 
-		return array( new MigrationLine( $this->family, '', '', '', '', Action::Waiting, '', $note ) );
+		return array( new MigrationLine( $this->family, '', '', '', '', Action::Waiting, 'Task ' . $this->task, $note ) );
 	}
 }

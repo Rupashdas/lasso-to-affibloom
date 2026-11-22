@@ -19,12 +19,15 @@ final class PluginTest extends TestCase {
 
 	private AdminNavigation $navigation;
 
+	private ExtensionScreen $pages;
+
 	protected function setUp(): void {
 		parent::setUp();
 		Functions\stubTranslationFunctions();
 		Functions\stubEscapeFunctions();
 		Functions\when( 'current_user_can' )->justReturn( true );
 		Functions\when( 'site_url' )->justReturn( 'https://site.example' );
+		Functions\when( 'plugins_url' )->justReturn( 'https://site.example/wp-content/plugins/affibloom-lasso-migrator/assets/admin/migrate.css' );
 		$this->navigation = new AdminNavigation();
 	}
 
@@ -32,7 +35,9 @@ final class PluginTest extends TestCase {
 	private function api( string $version ): Api {
 		$template = new Template( __DIR__, $this->navigation, new NoticeBoard( array(), static function (): void {} ) );
 
-		return new Api( $version, $this->navigation, new ExtensionScreen( $template ), static fn ( array $fields ): array => array() );
+		$this->pages = new ExtensionScreen( $template );
+
+		return new Api( $version, $this->navigation, $this->pages, static fn ( array $fields ): array => array() );
 	}
 
 	/** The menu's slugs. */
@@ -64,14 +69,23 @@ final class PluginTest extends TestCase {
 	}
 
 	public function test_a_new_enough_affibloom_lists_migrate_from_lasso_and_no_notice(): void {
+		Functions\when( 'get_option' )->alias( static fn ( string $name, $fallback = false ) => 'lasso_version' === $name ? '370' : $fallback );
 		$plugin = new Plugin();
 		$plugin->start( $this->api( Plugin::REQUIRES ) );
 
 		self::assertSame( array( MigrationScreen::SLUG ), $this->menu() );
 		self::assertSame( 'Migrate from Lasso', $this->navigation->current( MigrationScreen::SLUG )?->label() );
 		self::assertNotFalse( has_filter( 'affibloom_setup_wanted', array( $plugin, 'setup_wanted' ) ) );
+		self::assertSame( array(), $this->pages->unlisted() );
 		$this->expectOutputString( '' );
 		$plugin->too_old_notice();
+	}
+
+	public function test_without_lasso_s_data_the_page_is_reached_by_its_address_only(): void {
+		Functions\when( 'get_option' )->justReturn( false );
+		( new Plugin() )->start( $this->api( Plugin::REQUIRES ) );
+
+		self::assertSame( array( MigrationScreen::SLUG ), $this->pages->unlisted() );
 	}
 
 	public function test_the_setup_wizard_stays_shut_where_lasso_s_data_is(): void {

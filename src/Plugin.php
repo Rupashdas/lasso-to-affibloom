@@ -24,6 +24,7 @@ use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
+use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 
 /**
@@ -80,23 +81,35 @@ final class Plugin {
 		}
 		$this->started = true;
 
-		$screen = new MigrationScreen();
+		// One migration for the page, its download and the command; each runs it only when asked.
+		$migration = $this->migration( $api );
+		$screen    = new MigrationScreen(
+			$migration,
+			$this->lasso,
+			dirname( AFFIBLOOM_LASSO_MIGRATOR_FILE ) . '/templates',
+			plugins_url( 'assets/admin/migrate.css', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
+			AFFIBLOOM_LASSO_MIGRATOR_VERSION
+		);
+		$screen->register();
+		// Task 25D: shown in the menu while Lasso's data exists; its address says so when it does not.
 		$api->add_page(
 			MigrationScreen::SLUG,
 			static fn (): string => __( 'Migrate from Lasso', 'affibloom-lasso-migrator' ),
 			static fn (): string => __( "Move this site's Lasso links, settings and content into Affibloom.", 'affibloom-lasso-migrator' ),
-			$screen->render( ... )
+			$screen->render( ... ),
+			$this->lasso->has_data()
 		);
+		( new ReportDownload( $migration, $api->capability() ) )->register();
 		add_filter( 'affibloom_setup_wanted', array( $this, 'setup_wanted' ) );
-		$this->migrate_command( $api )->register();
+		( new MigrateCommand( $migration, $this->lasso ) )->register();
 	}
 
 	/**
-	 * `wp affibloom-lasso migrate` with the families built so far (F10 D3).
+	 * The migration with the families built so far, and the families still to come (F10 D3).
 	 *
 	 * @param Api $api Affibloom's extension API.
 	 */
-	private function migrate_command( Api $api ): MigrateCommand {
+	private function migration( Api $api ): MigrationService {
 		$source = new WpLassoSource();
 		$data   = new LeftBehind( $source );
 		$steps  = array(
@@ -120,7 +133,7 @@ final class Plugin {
 			$steps[] = new WaitingStep( Family::from( $family ), $data, $task );
 		}
 
-		return new MigrateCommand( new MigrationService( $steps, $data ), $this->lasso );
+		return new MigrationService( $steps, $data );
 	}
 
 	/**

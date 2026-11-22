@@ -1,0 +1,124 @@
+/*
+ * Migrate from Lasso (Task 25D): Affibloom's Meadow tokens and cards (affibloom/assets/admin/admin.css, loaded first);
+ * only the page's own parts here: the summary card, the family grid, the numbers, the verdict pills and the data table.
+ */
+
+.affibloom-migrate { display: grid; gap: 24px; }
+
+/* The summary: what this is, and the download. */
+.affibloom-migrate__intro {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px 24px;
+	padding: 20px var(--affibloom-space-card);
+	border-color: var(--affibloom-brand-line);
+	background: var(--affibloom-brand-25);
+}
+.affibloom-migrate__intro-text { flex: 1 1 360px; min-width: 0; }
+.affibloom-migrate__intro-title {
+	margin: 0;
+	color: var(--affibloom-ink-900);
+	font: 700 16px/24px var(--affibloom-font-display);
+}
+.affibloom-migrate__intro-line { margin: 4px 0 0; color: var(--affibloom-ink-700); font-size: 14px; line-height: 21px; }
+
+/* A card per family, three to a row on a wide screen, one on a phone. */
+.affibloom-migrate__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+	gap: 16px;
+}
+.affibloom-migrate__family { display: flex; flex-direction: column; padding: 20px 24px 22px; }
+/* The title with its state under it, the same on every card whatever the title's length. */
+.affibloom-migrate__family-head {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	margin-bottom: 14px;
+}
+.affibloom-admin .affibloom-migrate__family .affibloom-card__title { font-size: 17px; line-height: 24px; }
+.affibloom-migrate__found { margin: 0 0 6px; color: var(--affibloom-ink-600); font-size: 13px; line-height: 18px; }
+
+/* The numbers: label left, number right, rules between; a zero is quiet. */
+.affibloom-migrate__stats { margin: 0; }
+.affibloom-migrate__stat {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 7px 0;
+	border-top: 1px solid var(--affibloom-line);
+}
+.affibloom-migrate__stat:first-child { border-top: 0; }
+.affibloom-migrate__stat dt { min-width: 0; color: var(--affibloom-ink-700); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.affibloom-migrate__stat dd {
+	margin: 0;
+	color: var(--affibloom-ink-900);
+	font: 600 15px/20px var(--affibloom-font);
+	font-variant-numeric: tabular-nums;
+}
+.affibloom-migrate__stat--total dt { color: var(--affibloom-ink-900); font-weight: 600; }
+.affibloom-migrate__stat--total dd { font: 700 20px/24px var(--affibloom-font-display); }
+.affibloom-migrate__stat--zero dd { color: var(--affibloom-ink-400); font-weight: 500; }
+
+/* What needs a look: the family's error lines. */
+.affibloom-migrate__errors {
+	margin: 14px 0 0;
+	padding: 12px 14px;
+	border-radius: var(--affibloom-radius-control);
+	background: var(--affibloom-danger-50);
+	color: var(--affibloom-danger-700);
+	font-size: 13px;
+	line-height: 19px;
+	list-style: none;
+}
+.affibloom-migrate__errors li { margin: 0; }
+.affibloom-migrate__errors li + li { margin-top: 6px; }
+
+/* Verdict pills (design system "Status pill"). */
+.affibloom-migrate__state {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: var(--affibloom-radius-full);
+	background: var(--affibloom-segment-bg);
+	color: var(--affibloom-ink-700);
+	font: 600 12px/18px var(--affibloom-font);
+	white-space: nowrap;
+}
+.affibloom-migrate__state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.affibloom-migrate__state--ready { background: var(--affibloom-success-50); color: var(--affibloom-success-700); }
+.affibloom-migrate__state--errors { background: var(--affibloom-danger-50); color: var(--affibloom-danger-700); }
+.affibloom-migrate__state--waiting { background: var(--affibloom-warning-50); color: var(--affibloom-warning-700); }
+
+/* Lasso's data: three columns that fit a phone; long names wrap. */
+.affibloom-migrate__table-wrap { position: relative; overflow-x: auto; margin-top: 12px; }
+.affibloom-card--list .affibloom-table.affibloom-migrate__table { min-width: 0; table-layout: auto; }
+/* Affibloom's list rows are 80px tall with no padding (the Dashboard's); this list is denser. */
+.affibloom-card--list .affibloom-table.affibloom-migrate__table td { height: auto; padding: 12px 20px; vertical-align: top; }
+.affibloom-migrate__table code { padding: 0; background: none; color: var(--affibloom-ink-900); font-size: 13px; overflow-wrap: anywhere; }
+.affibloom-admin .affibloom-migrate__table .affibloom-migrate__rows { width: 1%; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.affibloom-migrate__reason { display: block; margin-top: 4px; color: var(--affibloom-ink-600); font-size: 13px; line-height: 18px; }
+
+@media (max-width: 600px) {
+	.affibloom-migrate__intro .affibloom-button { width: 100%; }
+
+	/* On a phone each row stacks: the name and its rows on one line, where it goes under them; the header hides. */
+	.affibloom-migrate__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+	.affibloom-migrate__table,
+	.affibloom-migrate__table tbody { display: block; }
+	.affibloom-migrate__table tr {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 6px 12px;
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--affibloom-line);
+	}
+	.affibloom-migrate__table tbody tr:last-child { border-bottom: 0; }
+	.affibloom-card--list .affibloom-table.affibloom-migrate__table td { display: block; width: auto; padding: 0; border: 0; }
+	.affibloom-card--list .affibloom-table.affibloom-migrate__table td:last-child { grid-column: 1 / -1; }
+}

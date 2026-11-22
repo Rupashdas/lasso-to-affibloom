@@ -4,6 +4,7 @@
 
 	<file>affibloom-lasso-migrator.php</file>
 	<file>src</file>
+	<file>templates</file>
 
 	<arg name="extensions" value="php"/>
 	<arg name="colors"/>
@@ -46,5 +47,10 @@
 				<element value="AffibloomLassoMigrator"/>
 			</property>
 		</properties>
+	</rule>
+
+	<!-- Template variables are local to MigrationScreen::template(), not globals. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>templates/*</exclude-pattern>
 	</rule>
 </ruleset>

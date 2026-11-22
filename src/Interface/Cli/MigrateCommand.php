@@ -16,6 +16,7 @@ use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
 use AffibloomLassoMigrator\Domain\Migration\MigrationReport;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
+use AffibloomLassoMigrator\Interface\ReportCsv;
 use InvalidArgumentException;
 use WP_CLI;
 use WP_CLI\Utils;
@@ -26,9 +27,6 @@ use WP_CLI\Utils;
  * (without --dry-run) comes with 26A.
  */
 final class MigrateCommand {
-
-	/** The printed and reported columns. */
-	public const FIELDS = array( 'family', 'lasso_id', 'name', 'type', 'status', 'value', 'action', 'target', 'note' );
 
 	/**
 	 * Builds the command.
@@ -96,9 +94,9 @@ final class MigrateCommand {
 		}
 
 		$report = $this->migration->plan( $families );
-		$rows   = array_map( self::row( ... ), $report->lines );
+		$rows   = array_map( ReportCsv::line( ... ), $report->lines );
 		if ( array() !== $rows ) {
-			Utils\format_items( $assoc_args['format'] ?? 'table', $rows, self::FIELDS );
+			Utils\format_items( $assoc_args['format'] ?? 'table', $rows, ReportCsv::FIELDS );
 			// WP-CLI prints JSON without a line end; the summary starts on its own line.
 			if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
 				WP_CLI::line();
@@ -114,7 +112,7 @@ final class MigrateCommand {
 			WP_CLI::line( self::left_summary( $report ) );
 		}
 		if ( isset( $assoc_args['report'] ) ) {
-			self::write_csv( $assoc_args['report'], array_merge( $rows, array_map( self::data_csv_row( ... ), $report->data ) ) );
+			self::write_csv( $assoc_args['report'], ReportCsv::rows( $report ) );
 			WP_CLI::line( sprintf( 'Report written to %s.', $assoc_args['report'] ) );
 		}
 
@@ -146,7 +144,8 @@ final class MigrateCommand {
 			);
 		}
 		if ( $report->count( $family, Action::Waiting ) > 0 ) {
-			return sprintf( '%s: %s.', $family->value, $report->lines_of( $family )[0]->note );
+			$line = $report->lines_of( $family )[0];
+			return sprintf( '%s: %s; moved by %s.', $family->value, $line->note, $line->target );
 		}
 		if ( Family::Products !== $family ) {
 			return sprintf( '%s: %d items.', $family->value, count( $report->lines_of( $family ) ) );
@@ -199,45 +198,7 @@ final class MigrateCommand {
 		);
 	}
 
-	/**
-	 * A kind of Lasso's data as a report line (family `data`).
-	 *
-	 * @param DataItem $item The item.
-	 * @return array<string, string>
-	 */
-	private static function data_csv_row( DataItem $item ): array {
-		return array(
-			'family'   => 'data',
-			'lasso_id' => $item->name,
-			'name'     => '',
-			'type'     => '',
-			'status'   => '',
-			'value'    => (string) $item->rows,
-			'action'   => null !== $item->family ? 'moved' : ( $item->known ? 'left' : 'error' ),
-			'target'   => null === $item->family ? '' : $item->family->value,
-			'note'     => $item->reason,
-		);
-	}
 
-	/**
-	 * A line as printed.
-	 *
-	 * @param MigrationLine $line The line.
-	 * @return array<string, string>
-	 */
-	private static function row( MigrationLine $line ): array {
-		return array(
-			'family'   => $line->family->value,
-			'lasso_id' => $line->key,
-			'name'     => $line->name,
-			'type'     => $line->type,
-			'status'   => $line->status,
-			'value'    => $line->value,
-			'action'   => $line->action->value,
-			'target'   => $line->target,
-			'note'     => $line->note,
-		);
-	}
 
 	/**
 	 * Writes the lines to a CSV file, with a header row.
@@ -251,10 +212,7 @@ final class MigrateCommand {
 		if ( false === $handle ) {
 			WP_CLI::error( sprintf( 'Could not write %s.', $file ) );
 		}
-		fputcsv( $handle, self::FIELDS, ',', '"', '' );
-		foreach ( $rows as $row ) {
-			fputcsv( $handle, array_values( $row ), ',', '"', '' );
-		}
+		ReportCsv::write( $handle, $rows );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- as above.
 		fclose( $handle );
 	}
