@@ -18,7 +18,8 @@ use AffibloomLassoMigrator\Domain\Conversion\TextStore;
  * as an importer's (WP-CLI has no user that may post unfiltered HTML, and the post's own markup must stay as it is). It
  * is read back: a post that did not store exactly what was written (another plugin's save hook changed it) is put back.
  * The content before the first conversion is kept once in `_affibloom_lasso_pre_conversion`, the md5 of what was last
- * written in `_affibloom_lasso_converted_md5`; revert refuses a post whose content is no longer that.
+ * written in `_affibloom_lasso_converted_md5`; revert refuses a post whose content is no longer that. The stamp cleaning
+ * (Task LM6, stamps()) lists the posts with Lasso's stamps and keeps its own copy, so the two revert apart.
  */
 final class PostTexts implements TextStore {
 
@@ -28,12 +29,37 @@ final class PostTexts implements TextStore {
 	/** The md5 of the content the last conversion wrote. */
 	public const WRITTEN = '_affibloom_lasso_converted_md5';
 
+	/** Lasso's markup: its shortcodes and its block. */
+	public const MARKUP = array( '%[lasso%', '%wp:affiliate-plugin/lasso%' );
+
+	/** Lasso's stamps (Task LM6). */
+	public const STAMPS = array( '%data-lasso-%', '%lasso-scan-ignore%', '%lasso-ll-do-not-delete%' );
+
+	/** The post's content before its stamps were removed (Task LM6). */
+	public const STAMPS_COPY = '_affibloom_lasso_pre_stamps';
+
+	/** The md5 of the content the stamp cleaning wrote. */
+	public const STAMPS_WRITTEN = '_affibloom_lasso_stamps_md5';
+
 	/**
 	 * Builds the store.
 	 *
-	 * @param list<string> $types The post types Lasso scanned (post, page and reusable blocks always).
+	 * @param list<string> $types   The post types Lasso scanned (post, page and reusable blocks always).
+	 * @param list<string> $markers What a post's content holds to be listed, as LIKE patterns.
+	 * @param string       $copy    The meta key of its content before the first write.
+	 * @param string       $written The meta key of the md5 of what was last written.
 	 */
-	public function __construct( private array $types = array() ) {}
+	public function __construct( private array $types = array(), private array $markers = self::MARKUP, private string $copy = self::COPY, private string $written = self::WRITTEN ) {}
+
+	/**
+	 * The store of the stamp cleaning (Task LM6): posts with Lasso's stamps, with their own copy, so a conversion and a
+	 * cleaning revert apart.
+	 *
+	 * @param list<string> $types The post types Lasso scanned.
+	 */
+	public static function stamps( array $types ): self {
+		return new self( $types, self::STAMPS, self::STAMPS_COPY, self::STAMPS_WRITTEN );
+	}
 
 	/**
 	 * What a place is, for the report.
@@ -53,12 +79,13 @@ final class PostTexts implements TextStore {
 
 		$types = array_values( array_unique( array_merge( array( 'post', 'page', 'wp_block' ), $this->types ) ) );
 		$in    = implode( ',', array_fill( 0, count( $types ), '%s' ) );
+		$like  = implode( ' OR ', array_fill( 0, count( $this->markers ), 'post_content LIKE %s' ) );
 		$one   = $post > 0 ? $wpdb->prepare( ' AND ID = %d', $post ) : '';
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared -- a one-time read; $in holds only placeholders, $one is prepared.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared -- a one-time read; $in and $like hold only placeholders, $one is prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT ID, post_status, post_content FROM {$wpdb->posts} WHERE post_type IN ($in) AND post_status NOT IN ('auto-draft', 'inherit') AND ( post_content LIKE %s OR post_content LIKE %s ){$one} ORDER BY ID",
-				...array_merge( $types, array( '%[lasso%', '%wp:affiliate-plugin/lasso%' ) )
+				"SELECT ID, post_status, post_content FROM {$wpdb->posts} WHERE post_type IN ($in) AND post_status NOT IN ('auto-draft', 'inherit') AND ( {$like} ){$one} ORDER BY ID",
+				...array_merge( $types, $this->markers )
 			)
 		);
 		// phpcs:enable
@@ -92,10 +119,10 @@ final class PostTexts implements TextStore {
 
 			return false;
 		}
-		if ( '' === (string) get_post_meta( $post, self::COPY, true ) ) {
-			update_post_meta( $post, self::COPY, wp_slash( $before ) );
+		if ( '' === (string) get_post_meta( $post, $this->copy, true ) ) {
+			update_post_meta( $post, $this->copy, wp_slash( $before ) );
 		}
-		update_post_meta( $post, self::WRITTEN, md5( $after ) );
+		update_post_meta( $post, $this->written, md5( $after ) );
 
 		return true;
 	}
@@ -111,7 +138,7 @@ final class PostTexts implements TextStore {
 
 		$one = $post > 0 ? $wpdb->prepare( ' AND post_id = %d', $post ) : '';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one list for a revert run; $one is prepared.
-		return array_map( 'strval', $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s{$one} ORDER BY post_id", self::COPY ) ) );
+		return array_map( 'strval', $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s{$one} ORDER BY post_id", $this->copy ) ) );
 	}
 
 	/**
@@ -122,12 +149,12 @@ final class PostTexts implements TextStore {
 	 */
 	public function revert( string $place, bool $force ): string {
 		$post = (int) $place;
-		$copy = get_post_meta( $post, self::COPY, true );
+		$copy = get_post_meta( $post, $this->copy, true );
 		$now  = $this->content( $post );
 		if ( ! is_string( $copy ) || '' === $copy || null === $now ) {
 			return self::NONE;
 		}
-		if ( ! $force && md5( $now ) !== (string) get_post_meta( $post, self::WRITTEN, true ) ) {
+		if ( ! $force && md5( $now ) !== (string) get_post_meta( $post, $this->written, true ) ) {
 			return self::EDITED;
 		}
 		if ( ! $this->save( $post, $copy ) ) {
@@ -135,8 +162,8 @@ final class PostTexts implements TextStore {
 
 			return self::FAILED;
 		}
-		delete_post_meta( $post, self::COPY );
-		delete_post_meta( $post, self::WRITTEN );
+		delete_post_meta( $post, $this->copy );
+		delete_post_meta( $post, $this->written );
 
 		return self::REVERTED;
 	}

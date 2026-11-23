@@ -30,9 +30,10 @@ final class FakeTextStore implements TextStore {
 	 * Builds the store.
 	 *
 	 * @param string $place  What the report shows as the place ('' for a post's content).
-	 * @param string $status The texts' status.
+	 * @param string       $status  The texts' status.
+	 * @param list<string> $markers What a text holds to be listed.
 	 */
-	public function __construct( private string $place = '', private string $status = 'publish' ) {}
+	public function __construct( private string $place = '', private string $status = 'publish', private array $markers = array( '[lasso', 'affiliate-plugin/lasso' ) ) {}
 
 	public function name(): string {
 		return '' === $this->place ? 'post' : $this->place;
@@ -48,7 +49,7 @@ final class FakeTextStore implements TextStore {
 	public function texts( int $post = 0 ): array {
 		$out = array();
 		foreach ( $this->texts as $key => $text ) {
-			if ( ( 0 === $post || $this->posts[ $key ] === $post ) && ( str_contains( $text, '[lasso' ) || str_contains( $text, 'affiliate-plugin/lasso' ) ) ) {
+			if ( ( 0 === $post || $this->posts[ $key ] === $post ) && array() !== array_filter( $this->markers, static fn ( string $marker ): bool => str_contains( $text, $marker ) ) ) {
 				$out[] = array(
 					'key'    => (string) $key,
 					'post'   => $this->posts[ $key ],

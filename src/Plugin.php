@@ -13,6 +13,7 @@ use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\AmazonStep;
 use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
 use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
+use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
 use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\DisplayStep;
 use AffibloomLassoMigrator\Application\FieldsStep;
@@ -40,6 +41,7 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiDisplay;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiFields;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiGroups;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiIssues;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiLinkTies;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiOpportunities;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiOriginalLinks;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
@@ -52,6 +54,7 @@ use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
 use AffibloomLassoMigrator\Infrastructure\WordPress\ElementorTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionConversionLock;
+use AffibloomLassoMigrator\Infrastructure\WordPress\PostMetaTieLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\PostTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WidgetTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WpAttributeParser;
@@ -62,6 +65,7 @@ use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\ConvertCommand;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
+use AffibloomLassoMigrator\Interface\Cli\StampsCommand;
 
 /**
  * The composition root: everything the migrator needs, built once, and hooked into WordPress only when Affibloom hands
@@ -145,7 +149,21 @@ final class Plugin {
 		// Task LM2: the conversion's dry run, built only for WP-CLI (it reads Lasso's settings).
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			( new ConvertCommand( $this->converter( $api ) ) )->register();
+			( new StampsCommand( $this->stamp_cleaner( $api ) ) )->register();
 		}
+	}
+
+	/**
+	 * The removal of Lasso's stamps (Task LM6): the posts of the types Lasso scanned, with their own copy, the products'
+	 * map, and Affibloom's link index through its API.
+	 *
+	 * @param Api $api Affibloom's extension API.
+	 */
+	private function stamp_cleaner( Api $api ): StampCleaner {
+		$source = new WpLassoSource();
+		$maps   = new MigrationMaps( new LassoIdMap(), new OptionMigrationLog( $this->lasso->version() ), $source, new ApiGroups( $api ) );
+
+		return new StampCleaner( PostTexts::stamps( $source->settings()->list( 'cpt_support' ) ), $maps->read( ... ), new ApiLinkTies( $api ), new PostMetaTieLog(), new OptionConversionLock() );
 	}
 
 	/**
