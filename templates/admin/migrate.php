@@ -249,6 +249,64 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 		</section>
 	<?php endif; ?>
 
+	<?php
+	// Task LM9: whether anything of Lasso is left in the content, read when the page opens.
+	if ( null !== $view['check'] ) :
+		$check_places = $view['check'];
+		$check_count  = array_sum( array_map( static fn ( array $place ): int => count( $place['items'] ), $check_places ) );
+		?>
+		<section class="affibloom-card affibloom-migrate__content affibloom-migrate__check" aria-labelledby="affibloom-migrate-check">
+			<div class="affibloom-migrate__family-head">
+				<h2 class="affibloom-card__title" id="affibloom-migrate-check"><?php esc_html_e( 'Check', 'affibloom-lasso-migrator' ); ?></h2>
+				<?php if ( array() === $check_places ) : ?>
+					<span class="affibloom-migrate__state affibloom-migrate__state--ready"><?php esc_html_e( 'Nothing left', 'affibloom-lasso-migrator' ); ?></span>
+				<?php else : ?>
+					<span class="affibloom-migrate__state affibloom-migrate__state--errors"><?php esc_html_e( 'Needs a look', 'affibloom-lasso-migrator' ); ?></span>
+				<?php endif; ?>
+			</div>
+			<?php if ( array() === $check_places ) : ?>
+				<p class="affibloom-migrate__intro-line"><?php esc_html_e( 'Nothing of Lasso is left in your content.', 'affibloom-lasso-migrator' ); ?></p>
+			<?php else : ?>
+				<p class="affibloom-migrate__intro-line">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: how many findings; 2: in how many places. */
+							__( '%1$s findings in %2$s places still need Lasso, or name a product, group or table Affibloom does not have. Convert the content above, or change each place by hand; this list is read again each time the page opens.', 'affibloom-lasso-migrator' ),
+							number_format_i18n( $check_count ),
+							number_format_i18n( count( $check_places ) )
+						)
+					);
+					?>
+				</p>
+				<ul class="affibloom-migrate__places affibloom-migrate__findings">
+					<?php foreach ( array_slice( $check_places, 0, 100 ) as $place ) : ?>
+						<li class="affibloom-migrate__place">
+							<a class="affibloom-migrate__place-title" href="<?php echo esc_url( $place['edit'] ); ?>"><?php echo esc_html( $place['title'] ); ?></a>
+							<span class="affibloom-migrate__reason">
+								<?php
+								echo esc_html(
+									implode(
+										'; ',
+										array_map(
+											/* translators: 1: what was found, such as "[lasso"; 2: how many. */
+											static fn ( array $item ): string => 1 === $item['count'] ? $item['what'] : sprintf( __( '%1$s (%2$s)', 'affibloom-lasso-migrator' ), $item['what'], number_format_i18n( $item['count'] ) ),
+											$place['items']
+										)
+									)
+								);
+								?>
+							</span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<?php if ( count( $check_places ) > 100 ) : ?>
+					<p class="affibloom-migrate__found"><?php esc_html_e( 'The first 100 places; run "wp affibloom-lasso verify" for every one.', 'affibloom-lasso-migrator' ); ?></p>
+				<?php endif; ?>
+			<?php endif; ?>
+		</section>
+	<?php endif; ?>
+
 	<?php if ( array() !== $view['data'] ) : ?>
 		<div class="affibloom-card affibloom-card--list affibloom-migrate__data">
 			<div class="affibloom-card__head">

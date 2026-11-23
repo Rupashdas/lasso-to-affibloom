@@ -15,6 +15,7 @@ use AffibloomLassoMigrator\Application\Conversion\BlockRepairer;
 use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
 use AffibloomLassoMigrator\Application\Conversion\ContentRun;
 use AffibloomLassoMigrator\Application\Conversion\CssTranslator;
+use AffibloomLassoMigrator\Application\Conversion\LeftoverCheck;
 use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
 use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
 use AffibloomLassoMigrator\Application\DisplayMapper;
@@ -48,6 +49,7 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiLinkTies;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiOpportunities;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiOriginalLinks;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiProducts;
+use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiRecords;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiSettings;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiTables;
 use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiVariants;
@@ -63,6 +65,7 @@ use AffibloomLassoMigrator\Infrastructure\WordPress\PostMetaTieLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\PostTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WidgetTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WpAttributeParser;
+use AffibloomLassoMigrator\Infrastructure\WordPress\WpContentPlaces;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
 use AffibloomLassoMigrator\Interface\Rest\ContentController;
@@ -74,6 +77,7 @@ use AffibloomLassoMigrator\Interface\Cli\ConvertCommand;
 use AffibloomLassoMigrator\Interface\Cli\CssCommand;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 use AffibloomLassoMigrator\Interface\Cli\StampsCommand;
+use AffibloomLassoMigrator\Interface\Cli\VerifyCommand;
 
 /**
  * The composition root: everything the migrator needs, built once, and hooked into WordPress only when Affibloom hands
@@ -133,7 +137,9 @@ final class Plugin {
 		$migration = $this->migration( $api );
 		// Task LM8: the content conversion for the page and its routes, built only when one of them needs it.
 		$content = fn (): ContentRun => new ContentRun( $this->converter( $api ), $this->stamp_cleaner( $api ), $this->block_repairer(), $this->css_translator(), new OptionRunState(), new OptionContentRunState() );
-		$screen  = new MigrationScreen(
+		// Task LM9: whether anything of Lasso is left, for the page's Check card and the command.
+		$check  = static fn (): LeftoverCheck => new LeftoverCheck( new WpContentPlaces( array_values( array_map( 'strval', (array) ( $api->settings()['scan_custom_fields'] ?? array() ) ) ) ), new ApiRecords( $api ) );
+		$screen = new MigrationScreen(
 			$migration,
 			$this->lasso,
 			dirname( AFFIBLOOM_LASSO_MIGRATOR_FILE ) . '/templates',
@@ -141,7 +147,8 @@ final class Plugin {
 			AFFIBLOOM_LASSO_MIGRATOR_VERSION,
 			plugins_url( 'assets/admin/migrate.js', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
 			new OptionMigrationLog( $this->lasso->version() ),
-			$content
+			$content,
+			$check
 		);
 		$screen->register();
 		// Task 26O: the page's run, one family per request.
@@ -164,6 +171,7 @@ final class Plugin {
 			( new StampsCommand( $this->stamp_cleaner( $api ) ) )->register();
 			( new BlocksCommand( $this->block_repairer() ) )->register();
 			( new CssCommand( $this->css_translator() ) )->register();
+			( new VerifyCommand( $check() ) )->register();
 		}
 	}
 

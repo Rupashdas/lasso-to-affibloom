@@ -168,6 +168,11 @@
 .affibloom-migrate__place-title { min-width: 0; color: var(--affibloom-ink-900); font-size: 14px; line-height: 21px; overflow-wrap: anywhere; }
 .affibloom-migrate__place-title:hover { color: var(--affibloom-brand-700); }
 
+/* The check (Task LM9): each place with what it still holds under its name. */
+.affibloom-migrate__findings { margin-top: 4px; }
+.affibloom-migrate__findings .affibloom-migrate__place { display: block; }
+.affibloom-migrate__findings .affibloom-migrate__reason { overflow-wrap: anywhere; }
+
 @media (max-width: 600px) {
 	.affibloom-migrate__intro .affibloom-button { width: 100%; }
 	.affibloom-migrate__content-run .affibloom-migrate__run-actions,

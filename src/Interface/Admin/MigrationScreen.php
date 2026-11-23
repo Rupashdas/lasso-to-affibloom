@@ -10,6 +10,8 @@ declare( strict_types=1 );
 namespace AffibloomLassoMigrator\Interface\Admin;
 
 use AffibloomLassoMigrator\Application\Conversion\ContentRun;
+use AffibloomLassoMigrator\Application\Conversion\LeftoverCheck;
+use AffibloomLassoMigrator\Domain\Conversion\Leftover;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Domain\Conversion\ConversionLine;
 use Closure;
@@ -39,16 +41,17 @@ final class MigrationScreen {
 	/**
 	 * Builds the screen.
 	 *
-	 * @param MigrationService            $migration The migration.
-	 * @param LassoInstall                $lasso     Whether the site has Lasso's data, and its version.
-	 * @param string                      $templates The migrator's templates/ folder.
-	 * @param string                      $css_url   The page's stylesheet.
-	 * @param string                      $version   The migrator's version, to bust caches.
-	 * @param string                      $js_url    The page's script (Run migration, Task 26O); '' for none.
-	 * @param MigrationLog|null           $log     Whether the products family ran, for "Update from Lasso".
-	 * @param (Closure():ContentRun)|null $content The content conversion (Task LM8), built when the page prints.
+	 * @param MigrationService               $migration The migration.
+	 * @param LassoInstall                   $lasso     Whether the site has Lasso's data, and its version.
+	 * @param string                         $templates The migrator's templates/ folder.
+	 * @param string                         $css_url   The page's stylesheet.
+	 * @param string                         $version   The migrator's version, to bust caches.
+	 * @param string                         $js_url    The page's script (Run migration, Task 26O); '' for none.
+	 * @param MigrationLog|null              $log     Whether the products family ran, for "Update from Lasso".
+	 * @param (Closure():ContentRun)|null    $content The content conversion (Task LM8), built when the page prints.
+	 * @param (Closure():LeftoverCheck)|null $check The check that nothing of Lasso is left (Task LM9).
 	 */
-	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null, private ?Closure $content = null ) {}
+	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null, private ?Closure $content = null, private ?Closure $check = null ) {}
 
 	/**
 	 * Hooks into WordPress.
@@ -93,6 +96,7 @@ final class MigrationScreen {
 				'data'          => $report->data,
 				'left'          => array_values( array_filter( $report->data, static fn ( DataItem $item ): bool => $item->is_left() ) ),
 				'content'       => null === $this->content ? null : $this->content_view( ( $this->content )() ),
+				'check'         => null === $this->check ? null : self::check_view( ( $this->check )()->check() ),
 			)
 		);
 	}
@@ -133,6 +137,31 @@ final class MigrationScreen {
 			'convert_url' => rest_url( MigrationController::NAMESPACE . '/convert' ),
 			'revert_url'  => rest_url( MigrationController::NAMESPACE . '/convert/revert' ),
 		);
+	}
+
+	/**
+	 * The Check card (Task LM9): the findings by place, each place with its link, in the order found.
+	 *
+	 * @param list<Leftover> $found The findings.
+	 * @return list<array{title: string, edit: string, items: list<array{what: string, count: int}>}>
+	 */
+	private static function check_view( array $found ): array {
+		$places = array();
+		foreach ( $found as $one ) {
+			$key                       = $one->title . '
+' . $one->edit;
+			$places[ $key ]          ??= array(
+				'title' => $one->title,
+				'edit'  => $one->edit,
+				'items' => array(),
+			);
+			$places[ $key ]['items'][] = array(
+				'what'  => $one->what,
+				'count' => $one->count,
+			);
+		}
+
+		return array_values( $places );
 	}
 
 	/**
