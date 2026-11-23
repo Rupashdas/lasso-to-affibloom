@@ -13,6 +13,7 @@ use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\AmazonStep;
 use AffibloomLassoMigrator\Application\Conversion\BlockRepairer;
 use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
+use AffibloomLassoMigrator\Application\Conversion\CssTranslator;
 use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
 use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
 use AffibloomLassoMigrator\Application\DisplayMapper;
@@ -53,6 +54,7 @@ use AffibloomLassoMigrator\Infrastructure\Affibloom\ApiViews;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoIdMap;
 use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
+use AffibloomLassoMigrator\Infrastructure\WordPress\CustomCssTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\ElementorTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionConversionLock;
 use AffibloomLassoMigrator\Infrastructure\WordPress\PostMetaTieLog;
@@ -66,6 +68,7 @@ use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\BlocksCommand;
 use AffibloomLassoMigrator\Interface\Cli\ConvertCommand;
+use AffibloomLassoMigrator\Interface\Cli\CssCommand;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 use AffibloomLassoMigrator\Interface\Cli\StampsCommand;
 
@@ -154,6 +157,8 @@ final class Plugin {
 			( new StampsCommand( $this->stamp_cleaner( $api ) ) )->register();
 			// Task LM6A: the buttons Lasso left for the editor to flag.
 			( new BlocksCommand( new BlockRepairer( PostTexts::blocks( ( new WpLassoSource() )->settings()->list( 'cpt_support' ) ), new OptionConversionLock() ) ) )->register();
+			// Task LM7: the site's Lasso CSS rules.
+			( new CssCommand( new CssTranslator( new CustomCssTexts(), new OptionConversionLock() ) ) )->register();
 		}
 	}
 

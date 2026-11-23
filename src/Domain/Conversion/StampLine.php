@@ -34,6 +34,9 @@ final class StampLine {
 	/** The post's GenerateBlocks buttons are written as GenerateBlocks saves them (Task LM6A): the item says how many. */
 	public const REPAIR = 'repair';
 
+	/** A CSS rule is translated to Affibloom's names (Task LM7): the item is Lasso's selector, the detail Affibloom's. */
+	public const TRANSLATE = 'translate';
+
 	/**
 	 * Builds the line.
 	 *

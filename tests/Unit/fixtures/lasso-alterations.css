@@ -1,0 +1,453 @@
+/* LASSO ALTERATIONS */ 
+
+div.lasso-display-table .table-vertical tr td:nth-child(1) span.badge-text{
+
+background-color: #004080 !important;
+	color: var(--base-3) !important;
+	background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.30)) !important;
+}
+
+.lasso-display-table .table-vertical table tr td:first-child .cell.has-badge-text {
+
+border-left: 3px solid #0059b3 !important;
+
+border-right: 3px solid #0059b3 !important;
+
+}
+
+.lasso-display-table .table-vertical table tr:first-child td .cell.has-badge-text {
+
+border-top: none !important;
+
+}
+
+div.lasso-display-table tr:last-child td:nth-child(1) div.cell.has-badge-text{
+
+border-bottom: 3px solid #0059b3 !important;
+
+}
+
+.lasso-display-table .table-vertical.template-1 .lasso-fields .img-container img {
+
+max-height: 200px !important;
+
+}
+
+.lasso-display-table .row-style.template-1 .table tr td .lasso-fields .img-container img{
+	margin: auto !important;
+  display: block !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	text-align: center !important;
+}
+
+
+div.lasso-display-table{
+	-webkit-box-shadow: 7px 7px 20px -5px rgba(0,0,0,0.75) !important;
+    -moz-box-shadow: 7x 7px 20px -5px rgba(0,0,0,0.75) !important;
+    box-shadow: 7px 7px 20px -5px rgba(0,0,0,0.75) !important;
+
+}
+
+div.lasso-display-table .lasso-fields .description-content .lasso-fields-single{
+	padding-top: 30px;
+	font-weight: normal !important;
+	font-size:calc(8px + 0.4vw) !important;
+	
+	@media (max-width: 767.98px) {
+			font-size: 5vw !important;
+	}
+}
+
+/*edit table button here*/
+
+div.lasso-display-table a.btn.lasso-button-1 {
+    font-size: inherit;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-hover);
+    color: #ffffff;
+    background-image: linear-gradient(211deg, var(--accent-hover), rgba(20, 20, 20, 0.39));
+    font-size: 14PX;
+    text-align: center;
+    padding: 10px 20px !important;
+    border-radius: 15px;
+    margin-top: 55px;
+    /*border-style: solid;
+    border-width: 2px;
+    border-color: var(--contrast-2);*/
+    display: inline-flex;
+    padding: 20px 10px !important;
+    border-radius: 10px !important;
+}
+div.lasso-display-table a.btn.lasso-button-1:hover{
+	background-color: #222222 !important;
+  color: #ffffff !important;
+	box-shadow: none !important;
+	
+}
+
+
+/*edit table button ends here*/
+
+.lasso-display{
+	    -webkit-box-shadow: 7px 7px 20px -5px rgba(0,0,0,0.75) !important;
+    -moz-box-shadow: 7x 7px 20px -5px rgba(0,0,0,0.75) !important;
+    box-shadow: 7px 7px 20px -5px rgba(0,0,0,0.75) !important;
+}
+
+
+}
+
+.lasso-cutter .lasso-box-5 {
+	line-height: 0.7 !important;
+
+}
+
+
+
+.lasso-cutter .lasso-box-1 {
+	margin: auto !important;
+  display: block !important;
+	flex: 0 0 40% !important;
+	max-width: 40% !important;
+	@media (max-width: 767.98px) {
+margin-top: 25px !important;	}
+}
+
+.lasso-cutter .lasso-box-2 {
+	flex: 0 0 60% !important;
+	max-width: 60% !important;
+}
+
+
+.lasso-cutter .lasso-title {
+	font-size: 40px !important;
+	text-decoration: none !important;
+	@media (max-width: 767.98px) {
+		font-size: 30px !important;
+	}
+}
+/*edit single product badge here*/
+.lasso-badge{
+	font-size: 1em !important;
+	padding-top: 15px !important;
+	padding-bottom: 16px !important;
+	
+}
+@media (max-width: 767.98px) {
+	.lasso-badge{
+		font-size: 0.8em !important;
+	}
+}
+
+/*edit single product button here*/
+
+.lasso-cutter a.lasso-button-2,
+.lasso-cutter a.lasso-button-1 {
+    font-size: 22.5px !important;
+	font-weight: normal !important;
+    /*border-style: solid !important;
+    border-width: 2px !important;
+    border-color: #301010 !important;
+    background-color: linear-gradient(331deg, #d67331, rgba(48, 32, 16, 0.56)) !important;
+    display: inline-flex;*/
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    padding: 15px 20px !important;
+	width: auto !important;
+}
+
+.lasso-cutter a.lasso-button-1:hover {
+	background-color: #222222 !important;
+  color: #ffffff !important;
+	box-shadow: none !important;
+}
+.lasso-cutter a.lasso-button-2:hover {
+	background-color: #222222 !important;
+  color: #ffffff !important;
+	box-shadow: none !important;
+}
+
+/*edit single product button here*/
+
+.lasso-cutter .lasso-end{
+	line-height: 0.7 !important;
+}
+
+.lasso-cactus.lasso-cutter {
+
+flex-direction: row-reverse;
+
+}
+
+.lasso-fields-single {
+
+font-weight: bold;
+text-align: center !important;
+	margin-top: -15px !important;
+margin-bottom: 15px !important;
+}
+
+
+@media (max-width: 767.98px) {
+
+	
+	
+	.lasso-display.lasso-cutter .lasso-box-2 {
+width:100% !important;
+max-width:100% !important;
+flex:0 0 100% !important;
+text-align: center !important;
+}
+
+.lasso-display.lasso-cutter .lasso-box-1 {
+width:100% !important;
+max-width:100% !important;
+flex:0 0 100% !important;
+text-align: center !important;
+}
+
+
+	
+	.lasso-display.lasso-cutter a.lasso-button-1{
+font-size:calc(11px + 0.8vw) !important;
+
+}
+.lasso-display.lasso-cutter a.lasso-button-2{
+
+font-size:calc(11px + 0.8vw) !important;
+}
+	
+}
+
+
+/*edit icons here*/
+
+span.pricetag-icon {
+
+content: url('/wp-content/uploads/2023/06/pricetag-icon.svg');
+
+object-fit: contain;
+height: 21px;
+margin-right: 3px;
+width:25px;
+
+position:relative;
+
+top:2px;
+	@media(max-width: 768px) {
+		height: 15px;
+		width: 15px;
+	}
+}
+
+span.medal-icon {
+
+content: url('/wp-content/uploads/2023/06/medal-icon.svg');
+	
+	
+
+object-fit: contain;
+height: 0.9em;
+width: 0.9em;
+
+position:relative;
+
+top:2px;
+	@media(max-width: 768px) {
+
+		height: 18px;
+		width: 18px;
+		
+	}
+}
+span.full-review-icon {
+
+content: url('/wp-content/uploads/2023/05/full-review-icon.svg');
+
+object-fit: contain;
+
+height: 21px;
+margin-right: 3px;
+width:21px;
+
+position:relative;
+
+top:2px;
+	@media(max-width: 768px) {
+		height: 15px;
+		width: 15px;
+	}
+}
+
+span.amazon-icon {
+
+content: url('/wp-content/uploads/2023/06/amazon-icon.svg');
+
+object-fit: contain;
+
+height: 21px;
+margin-right: 3px;
+width:21px;
+
+position:relative;
+
+top:3px;
+	@media(max-width: 768px) {
+		height: 15px;
+		width: 15px;
+	}
+}
+
+span.alsogood-icon {
+
+content: url('/wp-content/uploads/2023/06/alsogood-icon.svg');
+
+object-fit: contain;
+
+height: 21px;
+margin-right: 3px;
+width: 21px;
+
+position:relative;
+
+top:2px;
+	@media(max-width: 768px) {
+		height: 18px;
+		width: 18px;
+	}
+}
+span.youtube-icon {
+
+content: url('/wp-content/uploads/2026/11/youtube-icon.svg');
+
+object-fit: contain;
+
+height: 21px;
+margin-right: 3px;
+width:21px;
+
+position:relative;
+
+top:2px;
+	@media(max-width: 768px) {
+		height: 15px;
+		width: 15px;
+	}
+}
+.lasso-description{
+font-size:calc(10px + 0.4vw);
+	padding-top: 5px;
+padding-bottom: 10px;
+@media(max-width: 768px) {
+		font-size:calc(12px + 0.6vw) !important;
+	}
+
+}
+
+
+/*edit icons ends here*/
+
+
+
+/*edit badge here*/
+
+/*.badge-text-wrapper,
+.smaller-shadow.gb-container{
+	  margin-left: -25px;
+    background-color: #ffffff;
+    color: var(--contrast);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 20px;
+    border-style: solid;
+    border-width: 3px;
+    border-color: var(--contrast-2);
+    background-image: linear-gradient(211deg, var(--accent-hover), rgba(20, 20, 20, 0.39));
+    position: relative;
+    z-index: 2;
+    background-color: var(--accent) !important;
+    border-color: var(--contrast-2);
+    color: #ffffff;*/
+}
+/*.lasso-badge{
+    background-color: #ffffff;
+    color: var(--contrast);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 20px;
+    border-style: solid;
+    border-width: 3px;
+    border-color: var(--contrast-2);
+    background-image: linear-gradient(211deg, var(--accent-hover), rgba(20, 20, 20, 0.39));
+    z-index: 2;
+    background-color: var(--accent);
+    border-color: var(--contrast-2);
+    color: #ffffff;*/
+}
+.badge-text-wrapper:after,
+.lasso-badge::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    left: 15px;
+    bottom: -22px;
+    margin-top: -18px;
+    margin-right: 307px;
+    margin-left: -18px;
+    background-color: #193010;
+    color: #193010;
+    border-bottom-left-radius: 100px;
+    background-image: linear-gradient(211deg, var(--accent-hover), rgba(20, 20, 20, 0.29));
+    position: absolute;
+    height: 20px;
+	  border-width: 0;
+    width: 10px;
+}
+.badge-text-wrapper{
+	margin-left: 0
+}
+/*.badge-text-wrapper:after {
+    bottom: -12px !important;
+    left: 15px !important;
+}
+
+.badge-text-wrapper:before {
+    display: none;
+}*/
+.lasso-display-table .table thead tr th {
+    background-color: var(--accent) !important;
+    color: #ffffff;
+    font-weight: 700 !important;
+    font-size: 18px;
+    text-align: center !important;
+	padding: 13px;
+}
+.lasso-display-table .row-style .badge-text-wrapper {
+    width: max-content !important;
+}
+.lasso-display-table tr td:first-child {
+    max-width: 220px !important;
+} 
+
+/*edit table badge ends here*/
+
+/*Additional CSS: 22-jul-23*/
+
+div.description-content{
+	overflow: auto !important;
+	text-align: center !important;
+}
+
+div.description-content p{
+  display: inline !important;
+  vertical-align: middle !important;
+}
+.badge-text-wrapper{
+	margin-bottom:25px !important;
+}
+
+/* LASSO ALTERATIONS */
