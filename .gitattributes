@@ -1,0 +1,10 @@
+# What the release zip leaves out (tools/build-zip.sh archives the committed code with these excluded).
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/CHANGELOG.md export-ignore
+/README.md export-ignore
+/phpcs.xml.dist export-ignore
+/phpstan.neon.dist export-ignore
+/phpunit.xml.dist export-ignore
+/tests export-ignore
+/tools export-ignore
