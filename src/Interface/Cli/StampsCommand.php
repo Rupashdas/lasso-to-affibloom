@@ -12,7 +12,6 @@ namespace AffibloomLassoMigrator\Interface\Cli;
 use AffibloomLassoMigrator\Application\Conversion\ConversionLocked;
 use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
 use AffibloomLassoMigrator\Domain\Conversion\StampLine;
-use AffibloomLassoMigrator\Domain\Conversion\TextStore;
 use WP_CLI;
 use WP_CLI\Utils;
 
@@ -84,7 +83,7 @@ final class StampsCommand {
 		$post = isset( $assoc_args['post'] ) ? absint( $assoc_args['post'] ) : 0;
 		try {
 			if ( isset( $assoc_args['revert'] ) ) {
-				$this->revert( $post, isset( $assoc_args['force'] ) );
+				RevertReport::print( $this->cleaner->revert( $post, isset( $assoc_args['force'] ) ), 'cleaning' );
 				return;
 			}
 			$dry_run = isset( $assoc_args['dry-run'] );
@@ -114,36 +113,6 @@ final class StampsCommand {
 			WP_CLI::halt( 1 );
 		}
 		WP_CLI::success( $done );
-	}
-
-	/**
-	 * Puts cleaned posts back and says how each went.
-	 *
-	 * @param int  $post  One post; 0 for every cleaned post.
-	 * @param bool $force Also posts changed after their cleaning.
-	 */
-	private function revert( int $post, bool $force ): void {
-		$results = $this->cleaner->revert( $post, $force );
-		$counts  = array_count_values( $results );
-		foreach ( $results as $one => $result ) {
-			if ( TextStore::EDITED === $result ) {
-				WP_CLI::warning( ucfirst( $one ) . ' was changed after its cleaning: kept (--force reverts it).' );
-			} elseif ( TextStore::FAILED === $result ) {
-				WP_CLI::warning( ucfirst( $one ) . ' could not be put back exactly: it keeps its copy.' );
-			}
-		}
-		$line = sprintf(
-			'%d reverted, %d edited since (kept), %d with nothing to revert, %d failed.',
-			$counts[ TextStore::REVERTED ] ?? 0,
-			$counts[ TextStore::EDITED ] ?? 0,
-			$counts[ TextStore::NONE ] ?? 0,
-			$counts[ TextStore::FAILED ] ?? 0
-		);
-		if ( isset( $counts[ TextStore::FAILED ] ) ) {
-			WP_CLI::warning( $line );
-			WP_CLI::halt( 1 );
-		}
-		WP_CLI::success( $line );
 	}
 
 	/**

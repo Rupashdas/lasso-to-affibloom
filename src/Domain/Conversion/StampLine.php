@@ -11,7 +11,8 @@ namespace AffibloomLassoMigrator\Domain\Conversion;
 
 /**
  * What the stamp cleaning does in a post (Task LM6; F34 AC6): its stamps removed, a link tied to the product Lasso's
- * stamp named, a tie Affibloom keeps as it is, a post left as it was (blocked, or an error) with the reason.
+ * stamp named, a tie Affibloom keeps as it is, a post left as it was (blocked, or an error) with the reason; and what
+ * the block repair does (Task LM6A): its buttons repaired, or one left with the reason (blocked).
  */
 final class StampLine {
 
@@ -29,6 +30,9 @@ final class StampLine {
 
 	/** The post could not be written; it was left as it was. */
 	public const ERROR = 'error';
+
+	/** The post's GenerateBlocks buttons are written as GenerateBlocks saves them (Task LM6A): the item says how many. */
+	public const REPAIR = 'repair';
 
 	/**
 	 * Builds the line.

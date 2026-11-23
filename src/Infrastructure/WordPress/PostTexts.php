@@ -62,6 +62,15 @@ final class PostTexts implements TextStore {
 	}
 
 	/**
+	 * The store of the block repair (Task LM6A): posts with GenerateBlocks buttons, with their own copy.
+	 *
+	 * @param list<string> $types The post types Lasso scanned.
+	 */
+	public static function blocks( array $types ): self {
+		return new self( $types, array( '%wp:generateblocks/button%' ), '_affibloom_lasso_pre_blocks', '_affibloom_lasso_blocks_md5' );
+	}
+
+	/**
 	 * What a place is, for the report.
 	 */
 	public function name(): string {
