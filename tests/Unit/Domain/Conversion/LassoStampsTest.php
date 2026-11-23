@@ -50,16 +50,18 @@ final class LassoStampsTest extends TestCase {
 
 	/** A Rank Math FAQ keeps its answer as HTML in its JSON (post 3893); both forms of the stamp go. */
 	public function test_stamps_in_a_block_s_json_go_in_each_quoting(): void {
-		$json = '<!-- wp:rank-math/faq-block {"questions":[{"content":"See our <a data-lasso-id="15036" href="http://volleyballvault.local/best-shoes/" data-lasso-lid="17" data-lasso-name="Tom &amp; Co">guide</a>"}]} -->'
+		$faq  = static fn ( string $answer ): string => '<!-- wp:rank-math/faq-block {"questions":[{"content":"' . self::as_wordpress_json( $answer ) . '"}]} -->';
+		$json = $faq( 'See our <a data-lasso-id="15036" href="http://volleyballvault.local/best-shoes/" data-lasso-lid="17" data-lasso-name="Tom &amp; Co">guide</a>' )
 			. '<div><a data-lasso-id="15036" href="http://volleyballvault.local/best-shoes/">guide</a></div>'
-			. '<!-- wp:x {"html":"<a href=\"https://x.example/\" data-lasso-id=\"5\">x</a>"} /-->';
+			. '<!-- wp:x {"html":"<a href=' . self::slashed( '"https://x.example/"' ) . ' data-lasso-id=' . self::slashed( '"5"' ) . '>x</a>"} /-->';
 
 		$cleaned = LassoStamps::clean( $json );
 
+		self::assertStringContainsString( chr( 92 ) . 'u003ca data-lasso-id=' . chr( 92 ) . 'u0022', $json, 'The fixture holds the JSON form.' );
 		self::assertSame(
-			'<!-- wp:rank-math/faq-block {"questions":[{"content":"See our <a href="http://volleyballvault.local/best-shoes/">guide</a>"}]} -->'
+			$faq( 'See our <a href="http://volleyballvault.local/best-shoes/">guide</a>' )
 			. '<div><a href="http://volleyballvault.local/best-shoes/">guide</a></div>'
-			. '<!-- wp:x {"html":"<a href=\"https://x.example/\">x</a>"} /-->',
+			. '<!-- wp:x {"html":"<a href=' . self::slashed( '"https://x.example/"' ) . '>x</a>"} /-->',
 			$cleaned['text']
 		);
 		self::assertSame(
@@ -73,6 +75,18 @@ final class LassoStampsTest extends TestCase {
 			$cleaned['ties']
 		);
 		self::assertSame( 3, $cleaned['counts'][ LassoStamps::ID ] );
+	}
+
+	/** HTML as WordPress writes it inside a block's JSON: <, >, " and & as JSON escapes (built here, not typed). */
+	private static function as_wordpress_json( string $html ): string {
+		$escape = static fn ( string $hex ): string => chr( 92 ) . 'u00' . $hex;
+
+		return str_replace( array( '<', '>', '"', '&' ), array( $escape( '3c' ), $escape( '3e' ), $escape( '22' ), $escape( '26' ) ), $html );
+	}
+
+	/** Quotes escaped with a backslash, as another block's JSON may hold them. */
+	private static function slashed( string $quoted ): string {
+		return str_replace( '"', chr( 92 ) . '"', $quoted );
 	}
 
 	public function test_lasso_s_classes_go_or_become_affibloom_s(): void {
