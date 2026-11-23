@@ -117,8 +117,8 @@ final class CustomCssTexts implements TextStore {
 		}
 		$written = $this->option( self::WRITTEN );
 		unset( $copies[ $place ], $written[ $place ] );
-		update_option( self::COPY, $copies, false );
-		update_option( self::WRITTEN, $written, false );
+		self::keep( self::COPY, $copies );
+		self::keep( self::WRITTEN, $written );
 
 		return self::REVERTED;
 	}
@@ -154,6 +154,20 @@ final class CustomCssTexts implements TextStore {
 		}
 
 		return ! is_wp_error( $saved ) && $this->css( $theme ) === $css;
+	}
+
+	/**
+	 * Keeps an option holding values by stylesheet; an empty one is deleted, so a full revert leaves nothing.
+	 *
+	 * @param string                $name   The option.
+	 * @param array<string, string> $values The values.
+	 */
+	private static function keep( string $name, array $values ): void {
+		if ( array() === $values ) {
+			delete_option( $name );
+			return;
+		}
+		update_option( $name, $values, false );
 	}
 
 	/**
