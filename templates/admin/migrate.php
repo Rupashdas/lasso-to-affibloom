@@ -127,6 +127,128 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 		<?php endforeach; ?>
 	</div>
 
+	<?php
+	// Task LM8: the content conversion, one place per request, behind its own backup tick.
+	if ( null !== $view['content'] ) :
+		$content = $view['content'];
+		$plan    = $content['plan'];
+		$total   = count( $plan['places'] );
+		$stats   = array(
+			array( __( 'Places to convert', 'affibloom-lasso-migrator' ), $total, true ),
+			array( __( 'Lasso boxes', 'affibloom-lasso-migrator' ), $plan['boxes'], false ),
+			array( __( 'Blocked', 'affibloom-lasso-migrator' ), count( $plan['blocked'] ), false ),
+			array( __( "Posts with Lasso's stamps", 'affibloom-lasso-migrator' ), $plan['stamps'], false ),
+			array( __( 'Links to tie', 'affibloom-lasso-migrator' ), $plan['ties'], false ),
+			array( __( 'Buttons to repair', 'affibloom-lasso-migrator' ), $plan['buttons'], false ),
+			array( __( 'CSS rules', 'affibloom-lasso-migrator' ), $plan['css'], false ),
+		);
+		?>
+		<section
+			class="affibloom-card affibloom-migrate__content"
+			aria-labelledby="affibloom-migrate-content"
+			data-affibloom-migrate-content="
+			<?php
+			echo esc_attr(
+				(string) wp_json_encode(
+					array(
+						'convert' => $content['convert_url'],
+						'revert'  => $content['revert_url'],
+						'nonce'   => $view['nonce'],
+						'texts'   => array(
+							/* translators: 1: how many places are converted; 2: how many there are. */
+							'progress' => __( 'Converted %1$d of %2$d places', 'affibloom-lasso-migrator' ),
+							'done'     => __( 'Conversion finished. Reading the page again…', 'affibloom-lasso-migrator' ),
+							'errors'   => __( 'Some items did not save as written and were left as they were; run the commands with --dry-run to see them.', 'affibloom-lasso-migrator' ),
+							'failed'   => __( 'The conversion stopped. Press Convert again to continue where it stopped.', 'affibloom-lasso-migrator' ),
+							/* translators: %s: a post's title, or "Widgets and Additional CSS". */
+							'reverted' => __( '%s is back as it was.', 'affibloom-lasso-migrator' ),
+							/* translators: %s: a post's title. */
+							'kept'     => __( '%s was changed after its conversion, so it was kept; revert it with the command and --force.', 'affibloom-lasso-migrator' ),
+							'confirm'  => __( 'Put every converted place back as it was?', 'affibloom-lasso-migrator' ),
+						),
+					)
+				)
+			);
+			?>
+			"
+		>
+			<div class="affibloom-migrate__family-head">
+				<h2 class="affibloom-card__title" id="affibloom-migrate-content"><?php esc_html_e( 'Content', 'affibloom-lasso-migrator' ); ?></h2>
+				<?php if ( array() !== $content['converted'] ) : ?>
+					<span class="affibloom-migrate__state affibloom-migrate__state--ready"><?php esc_html_e( 'Converted', 'affibloom-lasso-migrator' ); ?></span>
+				<?php endif; ?>
+			</div>
+			<p class="affibloom-migrate__intro-line"><?php esc_html_e( "Lasso's boxes and shortcodes in posts, widgets and Elementor become Affibloom's; Lasso's stamps leave the links, which stay tied; the buttons and CSS rules Lasso changed follow. Run it after the migration, with Lasso deactivated, so its scan does not write its stamps back.", 'affibloom-lasso-migrator' ); ?></p>
+			<dl class="affibloom-migrate__stats affibloom-migrate__stats--wide">
+				<?php foreach ( $stats as $stat ) : ?>
+					<div class="affibloom-migrate__stat<?php echo $stat[2] ? ' affibloom-migrate__stat--total' : ''; ?><?php echo 0 === $stat[1] ? ' affibloom-migrate__stat--zero' : ''; ?>">
+						<dt><?php echo esc_html( $stat[0] ); ?></dt>
+						<dd><?php echo esc_html( number_format_i18n( $stat[1] ) ); ?></dd>
+					</div>
+				<?php endforeach; ?>
+			</dl>
+			<?php if ( array() !== $content['blocked'] ) : ?>
+				<p class="affibloom-migrate__found"><?php esc_html_e( 'Blocked: these stay as they are; change them by hand.', 'affibloom-lasso-migrator' ); ?></p>
+				<ul class="affibloom-migrate__errors">
+					<?php foreach ( $content['blocked'] as $item ) : ?>
+						<li><a href="<?php echo esc_url( $item['edit'] ); ?>"><strong><?php echo esc_html( '' === $item['title'] ? __( '(no title)', 'affibloom-lasso-migrator' ) : $item['title'] ); ?></strong></a> <?php echo esc_html( $item['reason'] ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+			<div class="affibloom-migrate__content-run">
+				<div class="affibloom-migrate__intro-text">
+					<label class="affibloom-migrate__backup">
+						<input type="checkbox" data-affibloom-content-backup>
+						<?php esc_html_e( 'I have a database backup from today.', 'affibloom-lasso-migrator' ); ?>
+					</label>
+					<p class="affibloom-migrate__status" data-affibloom-content-status aria-live="polite">
+						<?php
+						if ( null !== $content['progress'] ) {
+							echo esc_html(
+								sprintf(
+									/* translators: 1: how many places are converted; 2: how many there are. */
+									__( 'A conversion stopped at %1$d of %2$d places. Press Convert to continue.', 'affibloom-lasso-migrator' ),
+									$content['progress']['position'],
+									$content['progress']['total']
+								)
+							);
+						}
+						?>
+					</p>
+				</div>
+				<div class="affibloom-migrate__run-actions">
+					<button type="button" class="affibloom-button affibloom-button--primary" data-affibloom-content-convert disabled<?php echo 0 === $total && null === $content['progress'] ? ' data-affibloom-nothing' : ''; ?>><?php esc_html_e( 'Convert', 'affibloom-lasso-migrator' ); ?></button>
+				</div>
+			</div>
+			<?php if ( array() !== $content['converted'] ) : ?>
+				<div class="affibloom-migrate__converted">
+					<div class="affibloom-migrate__family-head">
+						<h3 class="affibloom-migrate__converted-title">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %s: how many places were converted. */
+									_n( '%s converted place', '%s converted places', count( $content['converted'] ), 'affibloom-lasso-migrator' ),
+									number_format_i18n( count( $content['converted'] ) )
+								)
+							);
+							?>
+						</h3>
+						<button type="button" class="affibloom-button affibloom-button--secondary" data-affibloom-content-revert-all><?php esc_html_e( 'Revert All', 'affibloom-lasso-migrator' ); ?></button>
+					</div>
+					<ul class="affibloom-migrate__places">
+						<?php foreach ( $content['converted'] as $place ) : ?>
+							<li class="affibloom-migrate__place" data-affibloom-content-place="<?php echo esc_attr( $place['place'] ); ?>" data-affibloom-content-title="<?php echo esc_attr( $place['title'] ); ?>">
+								<a class="affibloom-migrate__place-title" href="<?php echo esc_url( '' === $place['view'] ? $place['edit'] : $place['view'] ); ?>"><?php echo esc_html( '' === $place['title'] ? __( '(no title)', 'affibloom-lasso-migrator' ) : $place['title'] ); ?></a>
+								<button type="button" class="affibloom-button affibloom-button--secondary affibloom-button--small" data-affibloom-content-revert><?php esc_html_e( 'Revert', 'affibloom-lasso-migrator' ); ?></button>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
+		</section>
+	<?php endif; ?>
+
 	<?php if ( array() !== $view['data'] ) : ?>
 		<div class="affibloom-card affibloom-card--list affibloom-migrate__data">
 			<div class="affibloom-card__head">

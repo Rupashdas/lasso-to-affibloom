@@ -13,6 +13,7 @@ use Affibloom\Extension\Api;
 use AffibloomLassoMigrator\Application\AmazonStep;
 use AffibloomLassoMigrator\Application\Conversion\BlockRepairer;
 use AffibloomLassoMigrator\Application\Conversion\ContentConverter;
+use AffibloomLassoMigrator\Application\Conversion\ContentRun;
 use AffibloomLassoMigrator\Application\Conversion\CssTranslator;
 use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
 use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
@@ -56,6 +57,7 @@ use AffibloomLassoMigrator\Infrastructure\Lasso\LassoInstall;
 use AffibloomLassoMigrator\Infrastructure\Lasso\WpLassoSource;
 use AffibloomLassoMigrator\Infrastructure\WordPress\CustomCssTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\ElementorTexts;
+use AffibloomLassoMigrator\Infrastructure\WordPress\OptionContentRunState;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionConversionLock;
 use AffibloomLassoMigrator\Infrastructure\WordPress\PostMetaTieLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\PostTexts;
@@ -63,6 +65,7 @@ use AffibloomLassoMigrator\Infrastructure\WordPress\WidgetTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WpAttributeParser;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
+use AffibloomLassoMigrator\Interface\Rest\ContentController;
 use AffibloomLassoMigrator\Interface\Rest\MigrationController;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
@@ -128,18 +131,22 @@ final class Plugin {
 
 		// One migration for the page, its download and the command; each runs it only when asked.
 		$migration = $this->migration( $api );
-		$screen    = new MigrationScreen(
+		// Task LM8: the content conversion for the page and its routes, built only when one of them needs it.
+		$content = fn (): ContentRun => new ContentRun( $this->converter( $api ), $this->stamp_cleaner( $api ), $this->block_repairer(), $this->css_translator(), new OptionRunState(), new OptionContentRunState() );
+		$screen  = new MigrationScreen(
 			$migration,
 			$this->lasso,
 			dirname( AFFIBLOOM_LASSO_MIGRATOR_FILE ) . '/templates',
 			plugins_url( 'assets/admin/migrate.css', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
 			AFFIBLOOM_LASSO_MIGRATOR_VERSION,
 			plugins_url( 'assets/admin/migrate.js', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
-			new OptionMigrationLog( $this->lasso->version() )
+			new OptionMigrationLog( $this->lasso->version() ),
+			$content
 		);
 		$screen->register();
 		// Task 26O: the page's run, one family per request.
 		( new MigrationController( new MigrationRunner( $migration, new OptionRunState() ), $api->capability() ) )->register();
+		( new ContentController( $content, $api->capability() ) )->register();
 		// Task 25D: shown in the menu while Lasso's data exists; its address says so when it does not.
 		$api->add_page(
 			MigrationScreen::SLUG,
@@ -155,11 +162,23 @@ final class Plugin {
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			( new ConvertCommand( $this->converter( $api ) ) )->register();
 			( new StampsCommand( $this->stamp_cleaner( $api ) ) )->register();
-			// Task LM6A: the buttons Lasso left for the editor to flag.
-			( new BlocksCommand( new BlockRepairer( PostTexts::blocks( ( new WpLassoSource() )->settings()->list( 'cpt_support' ) ), new OptionConversionLock() ) ) )->register();
-			// Task LM7: the site's Lasso CSS rules.
-			( new CssCommand( new CssTranslator( new CustomCssTexts(), new OptionConversionLock() ) ) )->register();
+			( new BlocksCommand( $this->block_repairer() ) )->register();
+			( new CssCommand( $this->css_translator() ) )->register();
 		}
+	}
+
+	/**
+	 * The repair of the buttons Lasso left for the editor to flag (Task LM6A).
+	 */
+	private function block_repairer(): BlockRepairer {
+		return new BlockRepairer( PostTexts::blocks( ( new WpLassoSource() )->settings()->list( 'cpt_support' ) ), new OptionConversionLock() );
+	}
+
+	/**
+	 * The translation of the site's Lasso CSS rules (Task LM7).
+	 */
+	private function css_translator(): CssTranslator {
+		return new CssTranslator( new CustomCssTexts(), new OptionConversionLock() );
 	}
 
 	/**

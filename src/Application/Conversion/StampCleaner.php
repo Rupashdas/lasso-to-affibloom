@@ -115,6 +115,15 @@ final class StampCleaner {
 	}
 
 	/**
+	 * The cleaned posts, with a copy to revert to.
+	 *
+	 * @return list<string>
+	 */
+	public function converted(): array {
+		return $this->posts->converted();
+	}
+
+	/**
 	 * Takes the lock.
 	 *
 	 * @throws ConversionLocked When another run or revert holds it.

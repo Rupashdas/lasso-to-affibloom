@@ -90,6 +90,15 @@ final class CssTranslator {
 	}
 
 	/**
+	 * The themes whose CSS was translated, with a copy to revert to.
+	 *
+	 * @return list<string>
+	 */
+	public function converted(): array {
+		return $this->css->converted();
+	}
+
+	/**
 	 * Takes the lock.
 	 *
 	 * @throws ConversionLocked When another run or revert holds it.

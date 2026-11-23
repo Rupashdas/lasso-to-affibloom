@@ -67,18 +67,21 @@ final class ContentConverter {
 	 * Converts every text, or one post's: one line per item, `convert` for an item written, `blocked` with its reason,
 	 * `error` for a text that did not store as written (its place is left as it was).
 	 *
-	 * @param int $post One post's texts; 0 for every text.
+	 * @param int  $post     One post's texts; 0 for every text.
+	 * @param bool $unpinned Only the texts that are no post's, such as widgets (Task LM8's "site" step).
 	 * @return list<ConversionLine>
 	 * @throws ConversionLocked When another run or revert is going on.
 	 */
-	public function run( int $post = 0 ): array {
+	public function run( int $post = 0, bool $unpinned = false ): array {
 		$this->take();
 		try {
 			$maps  = ( $this->maps )();
 			$lines = array();
 			foreach ( $this->stores as $store ) {
 				foreach ( $store->texts( $post ) as $text ) {
-					$lines = array_merge( $lines, $this->write( $store, $text, $maps ) );
+					if ( ! $unpinned || 0 === $text['post'] ) {
+						$lines = array_merge( $lines, $this->write( $store, $text, $maps ) );
+					}
 				}
 			}
 
@@ -91,18 +94,21 @@ final class ContentConverter {
 	/**
 	 * Puts every converted place, or one post's, back as it was before its first conversion.
 	 *
-	 * @param int  $post  One post's places; 0 for every converted place.
-	 * @param bool $force Revert places changed after their conversion too.
+	 * @param int  $post     One post's places; 0 for every converted place.
+	 * @param bool $force    Revert places changed after their conversion too.
+	 * @param bool $unpinned Only the places that are no post's (a widget option; a post's place is its ID).
 	 * @return array<string, string> Each place's result (TextStore's REVERTED, EDITED, NONE or FAILED), by a label.
 	 * @throws ConversionLocked When another run or revert is going on.
 	 */
-	public function revert( int $post, bool $force ): array {
+	public function revert( int $post, bool $force, bool $unpinned = false ): array {
 		$this->take();
 		try {
 			$results = array();
 			foreach ( $this->stores as $store ) {
 				foreach ( $store->converted( $post ) as $place ) {
-					$results[ $store->name() . ' ' . $place ] = $store->revert( $place, $force );
+					if ( ! $unpinned || ! ctype_digit( $place ) ) {
+						$results[ $store->name() . ' ' . $place ] = $store->revert( $place, $force );
+					}
 				}
 			}
 
@@ -110,6 +116,20 @@ final class ContentConverter {
 		} finally {
 			$this->lock->release();
 		}
+	}
+
+	/**
+	 * The places with a copy to revert to, in every store: a post's ID, or a place that is no post's.
+	 *
+	 * @return list<string>
+	 */
+	public function converted(): array {
+		$places = array();
+		foreach ( $this->stores as $store ) {
+			$places = array_merge( $places, $store->converted() );
+		}
+
+		return array_values( array_unique( $places ) );
 	}
 
 	/**

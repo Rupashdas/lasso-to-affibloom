@@ -9,7 +9,10 @@ declare( strict_types=1 );
 
 namespace AffibloomLassoMigrator\Interface\Admin;
 
+use AffibloomLassoMigrator\Application\Conversion\ContentRun;
 use AffibloomLassoMigrator\Application\MigrationService;
+use AffibloomLassoMigrator\Domain\Conversion\ConversionLine;
+use Closure;
 use AffibloomLassoMigrator\Domain\Migration\Action;
 use AffibloomLassoMigrator\Domain\Migration\DataItem;
 use AffibloomLassoMigrator\Domain\Migration\Family;
@@ -36,15 +39,16 @@ final class MigrationScreen {
 	/**
 	 * Builds the screen.
 	 *
-	 * @param MigrationService  $migration The migration.
-	 * @param LassoInstall      $lasso     Whether the site has Lasso's data, and its version.
-	 * @param string            $templates The migrator's templates/ folder.
-	 * @param string            $css_url   The page's stylesheet.
-	 * @param string            $version   The migrator's version, to bust caches.
-	 * @param string            $js_url    The page's script (Run migration, Task 26O); '' for none.
-	 * @param MigrationLog|null $log      Whether the products family ran, for "Update from Lasso".
+	 * @param MigrationService            $migration The migration.
+	 * @param LassoInstall                $lasso     Whether the site has Lasso's data, and its version.
+	 * @param string                      $templates The migrator's templates/ folder.
+	 * @param string                      $css_url   The page's stylesheet.
+	 * @param string                      $version   The migrator's version, to bust caches.
+	 * @param string                      $js_url    The page's script (Run migration, Task 26O); '' for none.
+	 * @param MigrationLog|null           $log     Whether the products family ran, for "Update from Lasso".
+	 * @param (Closure():ContentRun)|null $content The content conversion (Task LM8), built when the page prints.
 	 */
-	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null ) {}
+	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null, private ?Closure $content = null ) {}
 
 	/**
 	 * Hooks into WordPress.
@@ -88,7 +92,46 @@ final class MigrationScreen {
 				'cards'         => array_map( fn ( Family $family ): array => $this->card( $report, $family ), $report->families ),
 				'data'          => $report->data,
 				'left'          => array_values( array_filter( $report->data, static fn ( DataItem $item ): bool => $item->is_left() ) ),
+				'content'       => null === $this->content ? null : $this->content_view( ( $this->content )() ),
 			)
+		);
+	}
+
+	/**
+	 * The Content card (Task LM8; F10 AC28): the dry run's figures, the blocked items with a link to each post, a run cut
+	 * off, the converted places with their names and links, and the routes.
+	 *
+	 * @param ContentRun $run The content conversion.
+	 * @return array{plan: array{boxes: int, blocked: list<ConversionLine>, stamps: int, ties: int, buttons: int, css: int, places: list<string>}, blocked: list<array{title: string, edit: string, reason: string}>, progress: array{position: int, total: int}|null, converted: list<array{place: string, title: string, edit: string, view: string}>, convert_url: string, revert_url: string}
+	 */
+	private function content_view( ContentRun $run ): array {
+		$plan    = $run->plan();
+		$blocked = array();
+		foreach ( array_slice( $plan['blocked'], 0, 20 ) as $line ) {
+			$blocked[] = array(
+				'title'  => $line->post > 0 ? get_the_title( $line->post ) : $line->place,
+				'edit'   => $line->post > 0 ? (string) get_edit_post_link( $line->post, 'raw' ) : admin_url( 'widgets.php' ),
+				'reason' => $line->reason,
+			);
+		}
+		$converted = array();
+		foreach ( $run->converted() as $place ) {
+			$post        = ContentRun::SITE === $place ? 0 : (int) substr( $place, 5 );
+			$converted[] = array(
+				'place' => $place,
+				'title' => 0 === $post ? __( 'Widgets and Additional CSS', 'affibloom-lasso-migrator' ) : get_the_title( $post ),
+				'edit'  => 0 === $post ? admin_url( 'widgets.php' ) : (string) get_edit_post_link( $post, 'raw' ),
+				'view'  => 0 === $post ? '' : (string) get_permalink( $post ),
+			);
+		}
+
+		return array(
+			'plan'        => $plan,
+			'blocked'     => $blocked,
+			'progress'    => $run->progress(),
+			'converted'   => $converted,
+			'convert_url' => rest_url( MigrationController::NAMESPACE . '/convert' ),
+			'revert_url'  => rest_url( MigrationController::NAMESPACE . '/convert/revert' ),
 		);
 	}
 
