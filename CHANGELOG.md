@@ -39,4 +39,6 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 
 - `--update --force` also gives a product adopted from Affibloom's one-time import Lasso's values where they differ, its Amazon price kept, once (Task 29A, deviation 161).
 
+- Fixed: while Lasso and Affibloom are both on, the links Lasso's own boxes draw are left as Lasso drew them (Affibloom's render-time link rules rewrote their New Window, `rel` and link, and counted them against the text's links) (Task 29D).
+
 - `wp affibloom-lasso migrate --only=groups`: every Lasso group with its name, slug and description, and its published products in Lasso's order.

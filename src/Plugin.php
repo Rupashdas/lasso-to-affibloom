@@ -164,6 +164,8 @@ final class Plugin {
 		);
 		( new ReportDownload( $migration, $api->capability() ) )->register();
 		add_filter( 'affibloom_setup_wanted', array( $this, 'setup_wanted' ) );
+		// Task 29D: while Lasso is on, its box draws its own links; Affibloom's render-time link rules leave them.
+		add_filter( 'affibloom_leave_link', array( self::class, 'leave_lasso_link' ), 10, 2 );
 		( new MigrateCommand( $migration, $this->lasso ) )->register();
 		// Task LM2: the conversion's dry run, built only for WP-CLI (it reads Lasso's settings).
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -245,6 +247,17 @@ final class Plugin {
 			new ProductsStep( $source, new LassoRecordMapper( site_url() ), $map, $products, $products ),
 		);
 		return new MigrationService( $steps, $data, $log );
+	}
+
+	/**
+	 * A link Lasso's own display draws (its box, grid, list and table links carry `data-lasso-box-trackable`) is left as
+	 * Lasso drew it, so readers see Lasso's boxes unchanged while both plugins are on (Task 29D).
+	 *
+	 * @param mixed $leave Whether another helper already leaves it.
+	 * @param mixed $names The link's attribute names.
+	 */
+	public static function leave_lasso_link( mixed $leave, mixed $names ): bool {
+		return true === $leave || ( is_array( $names ) && in_array( 'data-lasso-box-trackable', $names, true ) );
 	}
 
 	/**

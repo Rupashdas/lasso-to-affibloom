@@ -105,9 +105,17 @@ final class PluginTest extends TestCase {
 		self::assertSame( array( MigrationScreen::SLUG ), $this->menu() );
 		self::assertSame( 'Migrate from Lasso', $this->navigation->current( MigrationScreen::SLUG )?->label() );
 		self::assertNotFalse( has_filter( 'affibloom_setup_wanted', array( $plugin, 'setup_wanted' ) ) );
+		self::assertNotFalse( has_filter( 'affibloom_leave_link', array( Plugin::class, 'leave_lasso_link' ) ) );
 		self::assertSame( array(), $this->pages->unlisted() );
 		$this->expectOutputString( '' );
 		$plugin->too_old_notice();
+	}
+
+	/** Task 29D: Lasso's own display links are left as Lasso drew them; any other link is Affibloom's to print. */
+	public function test_lasso_s_display_links_are_left_as_drawn(): void {
+		self::assertTrue( Plugin::leave_lasso_link( false, array( 'class', 'href', 'data-lasso-box-trackable' ) ) );
+		self::assertFalse( Plugin::leave_lasso_link( false, array( 'href', 'data-lasso-id' ) ), "A link Lasso's scan stamped in the text is not its display's." );
+		self::assertTrue( Plugin::leave_lasso_link( true, array( 'href' ) ), "Another helper's answer stands." );
 	}
 
 	public function test_without_lasso_s_data_the_page_is_reached_by_its_address_only(): void {
