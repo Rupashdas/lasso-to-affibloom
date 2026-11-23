@@ -25,6 +25,9 @@ final class LassoIdMap implements MigratedProducts {
 	/** The meta that holds a product's mark (F10 D8). */
 	public const MARK_KEY = '_affibloom_migrated';
 
+	/** The one-time import's record (deviation 87), the migrator's key since deviation 146. */
+	public const IMPORT_OPTION = 'affibloom_lasso_import';
+
 	/**
 	 * The products by Lasso ID, once read.
 	 *
@@ -111,7 +114,7 @@ final class LassoIdMap implements MigratedProducts {
 	 * @param int $lasso_id The record.
 	 */
 	private function imported( int $lasso_id ): bool {
-		$import = get_option( 'affibloom_lasso_import' );
+		$import = get_option( self::IMPORT_OPTION );
 		if ( $lasso_id <= 0 || ! is_array( $import ) ) {
 			return false;
 		}

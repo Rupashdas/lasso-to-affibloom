@@ -41,6 +41,12 @@ final class PostTexts implements TextStore {
 	/** The md5 of the content the stamp cleaning wrote. */
 	public const STAMPS_WRITTEN = '_affibloom_lasso_stamps_md5';
 
+	/** The post's content before its GenerateBlocks buttons were repaired (Task LM6A). */
+	public const BLOCKS_COPY = '_affibloom_lasso_pre_blocks';
+
+	/** The md5 of the content the block repair wrote. */
+	public const BLOCKS_WRITTEN = '_affibloom_lasso_blocks_md5';
+
 	/**
 	 * Builds the store.
 	 *
@@ -67,7 +73,7 @@ final class PostTexts implements TextStore {
 	 * @param list<string> $types The post types Lasso scanned.
 	 */
 	public static function blocks( array $types ): self {
-		return new self( $types, array( '%wp:generateblocks/button%' ), '_affibloom_lasso_pre_blocks', '_affibloom_lasso_blocks_md5' );
+		return new self( $types, array( '%wp:generateblocks/button%' ), self::BLOCKS_COPY, self::BLOCKS_WRITTEN );
 	}
 
 	/**

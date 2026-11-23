@@ -20,6 +20,7 @@ use AffibloomLassoMigrator\Application\Conversion\MigrationMaps;
 use AffibloomLassoMigrator\Application\Conversion\StampCleaner;
 use AffibloomLassoMigrator\Application\DisplayMapper;
 use AffibloomLassoMigrator\Application\DisplayStep;
+use AffibloomLassoMigrator\Application\Finish;
 use AffibloomLassoMigrator\Application\FieldsStep;
 use AffibloomLassoMigrator\Application\GroupsStep;
 use AffibloomLassoMigrator\Application\LassoRecordMapper;
@@ -66,15 +67,18 @@ use AffibloomLassoMigrator\Infrastructure\WordPress\PostTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WidgetTexts;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WpAttributeParser;
 use AffibloomLassoMigrator\Infrastructure\WordPress\WpContentPlaces;
+use AffibloomLassoMigrator\Infrastructure\WordPress\WpMigratorData;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionMigrationLog;
 use AffibloomLassoMigrator\Infrastructure\WordPress\OptionRunState;
 use AffibloomLassoMigrator\Interface\Rest\ContentController;
+use AffibloomLassoMigrator\Interface\Rest\FinishController;
 use AffibloomLassoMigrator\Interface\Rest\MigrationController;
 use AffibloomLassoMigrator\Interface\Admin\MigrationScreen;
 use AffibloomLassoMigrator\Interface\Admin\ReportDownload;
 use AffibloomLassoMigrator\Interface\Cli\BlocksCommand;
 use AffibloomLassoMigrator\Interface\Cli\ConvertCommand;
 use AffibloomLassoMigrator\Interface\Cli\CssCommand;
+use AffibloomLassoMigrator\Interface\Cli\FinishCommand;
 use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 use AffibloomLassoMigrator\Interface\Cli\StampsCommand;
 use AffibloomLassoMigrator\Interface\Cli\VerifyCommand;
@@ -138,8 +142,12 @@ final class Plugin {
 		// Task LM8: the content conversion for the page and its routes, built only when one of them needs it.
 		$content = fn (): ContentRun => new ContentRun( $this->converter( $api ), $this->stamp_cleaner( $api ), $this->block_repairer(), $this->css_translator(), new OptionRunState(), new OptionContentRunState() );
 		// Task LM9: whether anything of Lasso is left, for the page's Check card and the command.
-		$check  = static fn (): LeftoverCheck => new LeftoverCheck( new WpContentPlaces( array_values( array_map( 'strval', (array) ( $api->settings()['scan_custom_fields'] ?? array() ) ) ) ), new ApiRecords( $api ) );
-		$screen = new MigrationScreen(
+		$check = static fn (): LeftoverCheck => new LeftoverCheck( new WpContentPlaces( array_values( array_map( 'strval', (array) ( $api->settings()['scan_custom_fields'] ?? array() ) ) ) ), new ApiRecords( $api ) );
+		// Task LM10: Finish migration, for the page, its route and the command.
+		$data     = new WpMigratorData();
+		$finish   = static fn (): Finish => new Finish( $check(), $data, new OptionRunState(), new OptionConversionLock() );
+		$finished = $data->finished() > 0;
+		$screen   = new MigrationScreen(
 			$migration,
 			$this->lasso,
 			dirname( AFFIBLOOM_LASSO_MIGRATOR_FILE ) . '/templates',
@@ -148,12 +156,10 @@ final class Plugin {
 			plugins_url( 'assets/admin/migrate.js', AFFIBLOOM_LASSO_MIGRATOR_FILE ),
 			new OptionMigrationLog( $this->lasso->version() ),
 			$content,
-			$check
+			$check,
+			$finish
 		);
 		$screen->register();
-		// Task 26O: the page's run, one family per request.
-		( new MigrationController( new MigrationRunner( $migration, new OptionRunState() ), $api->capability() ) )->register();
-		( new ContentController( $content, $api->capability() ) )->register();
 		// Task 25D: shown in the menu while Lasso's data exists; its address says so when it does not.
 		$api->add_page(
 			MigrationScreen::SLUG,
@@ -162,10 +168,21 @@ final class Plugin {
 			$screen->render( ... ),
 			$this->lasso->has_data()
 		);
-		( new ReportDownload( $migration, $api->capability() ) )->register();
 		add_filter( 'affibloom_setup_wanted', array( $this, 'setup_wanted' ) );
 		// Task 29D: while Lasso is on, its box draws its own links; Affibloom's render-time link rules leave them.
 		add_filter( 'affibloom_leave_link', array( self::class, 'leave_lasso_link' ), 10, 2 );
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			( new FinishCommand( $finish() ) )->register();
+		}
+		// Once finished, the migration's map is gone: nothing may run again, the page only says to delete the plugin.
+		if ( $finished ) {
+			return;
+		}
+		// Task 26O: the page's run, one family per request.
+		( new MigrationController( new MigrationRunner( $migration, new OptionRunState() ), $api->capability() ) )->register();
+		( new ContentController( $content, $api->capability() ) )->register();
+		( new FinishController( $finish, $api->capability() ) )->register();
+		( new ReportDownload( $migration, $api->capability() ) )->register();
 		( new MigrateCommand( $migration, $this->lasso ) )->register();
 		// Task LM2: the conversion's dry run, built only for WP-CLI (it reads Lasso's settings).
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

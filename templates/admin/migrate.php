@@ -307,6 +307,66 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 		</section>
 	<?php endif; ?>
 
+	<?php
+	// Task LM10: Finish migration, open only once the Check card finds nothing; its dialog says what cannot be undone.
+	if ( null !== $view['finish_url'] && null !== $view['check'] ) :
+		$finish_clean = array() === $view['check'];
+		?>
+		<section
+			class="affibloom-card affibloom-migrate__content affibloom-migrate__finish"
+			aria-labelledby="affibloom-migrate-finish"
+			data-affibloom-migrate-finish="
+			<?php
+			echo esc_attr(
+				(string) wp_json_encode(
+					array(
+						'url'   => $view['finish_url'],
+						'nonce' => $view['nonce'],
+						'texts' => array(
+							'done'   => __( 'Migration finished. Reading the page again…', 'affibloom-lasso-migrator' ),
+							'failed' => __( 'Finish stopped. Please try again.', 'affibloom-lasso-migrator' ),
+						),
+					)
+				)
+			);
+			?>
+			"
+		>
+			<div class="affibloom-migrate__family-head">
+				<h2 class="affibloom-card__title" id="affibloom-migrate-finish"><?php esc_html_e( 'Finish migration', 'affibloom-lasso-migrator' ); ?></h2>
+			</div>
+			<p class="affibloom-migrate__intro-line"><?php esc_html_e( "Once the site runs on Affibloom and the move is signed off, finish the migration: the conversion's copies, the migration's map, and the migrator's options, logs and locks are removed. Then deactivate and delete this plugin. Lasso's own data is not touched.", 'affibloom-lasso-migrator' ); ?></p>
+			<div class="affibloom-migrate__content-run">
+				<div class="affibloom-migrate__intro-text">
+					<?php if ( ! $finish_clean ) : ?>
+						<p class="affibloom-migrate__found"><?php esc_html_e( 'Convert or remove the items listed under Check first.', 'affibloom-lasso-migrator' ); ?></p>
+					<?php endif; ?>
+					<p class="affibloom-migrate__status" data-affibloom-finish-status aria-live="polite"></p>
+				</div>
+				<div class="affibloom-migrate__run-actions">
+					<button type="button" class="affibloom-button affibloom-button--secondary" data-affibloom-open="affibloom-migrate-finish-dialog"<?php disabled( ! $finish_clean ); ?>><?php esc_html_e( 'Finish migration', 'affibloom-lasso-migrator' ); ?></button>
+				</div>
+			</div>
+		</section>
+		<div id="affibloom-migrate-finish-dialog" class="affibloom-modal" hidden>
+			<div class="affibloom-modal__backdrop" data-affibloom-close></div>
+			<div class="affibloom-modal__panel" role="dialog" aria-modal="true" aria-labelledby="affibloom-migrate-finish-title" aria-describedby="affibloom-migrate-finish-text">
+				<div class="affibloom-modal__head">
+					<span class="affibloom-chip affibloom-modal__chip affibloom-chip--danger" aria-hidden="true"><svg class="affibloom-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3.5 17.2 16H2.8z"/><path d="M10 8.5v3.2M10 13.9v.1"/></svg></span>
+					<h2 id="affibloom-migrate-finish-title" class="affibloom-modal__title"><?php esc_html_e( 'Finish the migration?', 'affibloom-lasso-migrator' ); ?></h2>
+					<button type="button" class="affibloom-modal__close" data-affibloom-close aria-label="<?php esc_attr_e( 'Close', 'affibloom-lasso-migrator' ); ?>"><svg class="affibloom-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg></button>
+				</div>
+				<div class="affibloom-modal__body">
+					<p id="affibloom-migrate-finish-text" class="affibloom-modal__intro"><?php esc_html_e( "After this, the way back to Lasso is your database backup only: the conversion's copies and the migration's map are removed for good.", 'affibloom-lasso-migrator' ); ?></p>
+				</div>
+				<div class="affibloom-modal__foot">
+					<button type="button" class="affibloom-button affibloom-button--secondary" data-affibloom-close><?php esc_html_e( 'Cancel', 'affibloom-lasso-migrator' ); ?></button>
+					<button type="button" class="affibloom-button affibloom-button--danger" data-affibloom-finish-confirm><?php esc_html_e( 'Finish migration', 'affibloom-lasso-migrator' ); ?></button>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( array() !== $view['data'] ) : ?>
 		<div class="affibloom-card affibloom-card--list affibloom-migrate__data">
 			<div class="affibloom-card__head">

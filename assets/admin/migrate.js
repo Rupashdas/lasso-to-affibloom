@@ -185,3 +185,48 @@
 	backup.addEventListener( 'change', () => setBusy( busy ) );
 	setBusy( false );
 } )();
+
+/**
+ * Migrate from Lasso: Finish migration (Task LM10). The card's button opens Affibloom's modal (admin.js); its Finish
+ * migration posts once with `confirmed`, and the page reloads to say the migration is finished. A refusal (the Check
+ * card finds something, or another run holds a lock) shows the route's words on the card.
+ */
+( function () {
+	const root = document.querySelector( '[data-affibloom-migrate-finish]' );
+	const confirm = document.querySelector( '[data-affibloom-finish-confirm]' );
+	if ( ! root || ! confirm ) {
+		return;
+	}
+	const config = JSON.parse( root.getAttribute( 'data-affibloom-migrate-finish' ) );
+	const status = root.querySelector( '[data-affibloom-finish-status]' );
+
+	confirm.addEventListener( 'click', async () => {
+		confirm.disabled = true;
+		let message = config.texts.done;
+		let failed = false;
+		try {
+			const response = await fetch( config.url, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+				body: JSON.stringify( { confirmed: true } ),
+			} );
+			const answer = await response.json();
+			if ( ! response.ok ) {
+				failed = true;
+				message = answer.message || config.texts.failed;
+			}
+		} catch ( error ) {
+			failed = true;
+			message = config.texts.failed;
+		}
+		window.affibloomModal.hide();
+		status.textContent = message;
+		status.classList.toggle( 'affibloom-migrate__status--error', failed );
+		if ( failed ) {
+			confirm.disabled = false;
+			return;
+		}
+		window.setTimeout( () => window.location.reload(), 600 );
+	} );
+} )();

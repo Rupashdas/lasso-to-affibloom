@@ -11,6 +11,7 @@ namespace AffibloomLassoMigrator\Interface\Admin;
 
 use AffibloomLassoMigrator\Application\Conversion\ContentRun;
 use AffibloomLassoMigrator\Application\Conversion\LeftoverCheck;
+use AffibloomLassoMigrator\Application\Finish;
 use AffibloomLassoMigrator\Domain\Conversion\Leftover;
 use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Domain\Conversion\ConversionLine;
@@ -50,8 +51,9 @@ final class MigrationScreen {
 	 * @param MigrationLog|null              $log     Whether the products family ran, for "Update from Lasso".
 	 * @param (Closure():ContentRun)|null    $content The content conversion (Task LM8), built when the page prints.
 	 * @param (Closure():LeftoverCheck)|null $check The check that nothing of Lasso is left (Task LM9).
+	 * @param (Closure():Finish)|null        $finish Finish migration (Task LM10), built when the page prints.
 	 */
-	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null, private ?Closure $content = null, private ?Closure $check = null ) {}
+	public function __construct( private MigrationService $migration, private LassoInstall $lasso, private string $templates, private string $css_url, private string $version, private string $js_url = '', private ?MigrationLog $log = null, private ?Closure $content = null, private ?Closure $check = null, private ?Closure $finish = null ) {}
 
 	/**
 	 * Hooks into WordPress.
@@ -78,6 +80,18 @@ final class MigrationScreen {
 	 * Prints the page's body.
 	 */
 	public function render(): void {
+		// Task LM10: once finished, nothing can run again; the page says so and points to the plugins.
+		$finished = null === $this->finish ? 0 : ( $this->finish )()->finished();
+		if ( $finished > 0 ) {
+			$this->template(
+				'finished',
+				array(
+					'finished' => $finished,
+					'plugins'  => admin_url( 'plugins.php' ),
+				)
+			);
+			return;
+		}
 		if ( ! $this->lasso->has_data() ) {
 			$this->template( 'empty', array() );
 			return;
@@ -97,6 +111,7 @@ final class MigrationScreen {
 				'left'          => array_values( array_filter( $report->data, static fn ( DataItem $item ): bool => $item->is_left() ) ),
 				'content'       => null === $this->content ? null : $this->content_view( ( $this->content )() ),
 				'check'         => null === $this->check ? null : self::check_view( ( $this->check )()->check() ),
+				'finish_url'    => null === $this->finish ? null : rest_url( MigrationController::NAMESPACE . '/finish' ),
 			)
 		);
 	}

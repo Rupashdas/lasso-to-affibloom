@@ -111,6 +111,30 @@ final class PluginTest extends TestCase {
 		$plugin->too_old_notice();
 	}
 
+	public function test_a_site_not_finished_gets_the_routes_and_the_download(): void {
+		Functions\when( 'get_option' )->alias( static fn ( string $name, $fallback = false ) => 'lasso_version' === $name ? '370' : $fallback );
+		( new Plugin() )->start( $this->api( Plugin::REQUIRES ) );
+
+		self::assertTrue( has_action( 'rest_api_init' ) );
+		self::assertTrue( has_action( 'admin_post_' . MigrationScreen::DOWNLOAD ) );
+	}
+
+	/** Task LM10: once finished, the migration's map is gone, so only the page starts, to say the plugin can go. */
+	public function test_a_finished_site_starts_the_page_only(): void {
+		Functions\when( 'get_option' )->alias(
+			static fn ( string $name, $fallback = false ) => match ( $name ) {
+				'lasso_version'            => '370',
+				'affibloom_lasso_finished' => 1800000000,
+				default                    => $fallback,
+			}
+		);
+		( new Plugin() )->start( $this->api( Plugin::REQUIRES ) );
+
+		self::assertSame( array( MigrationScreen::SLUG ), $this->menu() );
+		self::assertFalse( has_action( 'rest_api_init' ), 'No route: nothing can run again.' );
+		self::assertFalse( has_action( 'admin_post_' . MigrationScreen::DOWNLOAD ), 'No report download.' );
+	}
+
 	/** Task 29D: Lasso's own display links are left as Lasso drew them; any other link is Affibloom's to print. */
 	public function test_lasso_s_display_links_are_left_as_drawn(): void {
 		self::assertTrue( Plugin::leave_lasso_link( false, array( 'class', 'href', 'data-lasso-box-trackable' ) ) );

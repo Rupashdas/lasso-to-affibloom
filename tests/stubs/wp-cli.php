@@ -23,6 +23,11 @@ namespace {
 		public static function line( string $message = '' ): void {}
 
 		/**
+		 * @param array<string, mixed> $assoc_args
+		 */
+		public static function confirm( string $question, array $assoc_args = array() ): void {}
+
+		/**
 		 * @return never
 		 */
 		public static function halt( int $return_code ) {}
