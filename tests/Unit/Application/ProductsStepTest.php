@@ -165,6 +165,53 @@ final class ProductsStepTest extends TestCase {
 		self::assertSame( '', $second[0]->note );
 	}
 
+	/**
+	 * Task 29A (deviation 161): an adopted product kept the one-time import's values; --update --force gives it Lasso's
+	 * where they differ, Affibloom's fresh Amazon price aside, once; without --force, or for a product the migration
+	 * made, nothing changes.
+	 */
+	public function test_force_gives_an_adopted_product_lasso_s_values_once_keeping_its_price(): void {
+		$lasso    = self::record(
+			1,
+			'publish',
+			array(
+				'lasso_final_url' => 'https://c.example/',
+				'open_new_tab'    => '1',
+			)
+		);
+		$fields   = ( new LassoRecordMapper( 'https://site.example' ) )->fields( $lasso );
+		$imported = array_merge( $fields, array( 'new_tab' => false, 'price' => '$19.99' ) );
+		$this->affibloom->products[40] = array(
+			'status'  => 'publish',
+			'fields'  => $imported,
+			'to'      => 0,
+			'created' => '',
+		);
+		$this->map->map[1]             = array( 40 );
+		$this->step( array( $lasso ) )->run();
+		self::assertTrue( $this->map->mark( 40 )->adopted );
+
+		self::assertSame( Action::Unchanged, $this->step( array( $lasso ) )->run( true )[0]->action, 'Without --force an adopted product keeps its values.' );
+
+		$forced = $this->step( array( $lasso ) )->run( true, true );
+		self::assertSame( Action::Update, $forced[0]->action );
+		self::assertStringStartsWith( 'adopted from the one-time import', $forced[0]->note );
+		self::assertSame( $fields['new_tab'], $this->affibloom->products[40]['fields']['new_tab'] );
+		self::assertSame( '$19.99', $this->affibloom->products[40]['fields']['price'], "Affibloom's Amazon price is kept." );
+		self::assertFalse( $this->map->mark( 40 )->adopted, 'Restored: it carries the values Lasso gives now.' );
+
+		self::assertSame( Action::Unchanged, $this->step( array( $lasso ) )->run( true, true )[0]->action, 'A second run changes nothing.' );
+	}
+
+	public function test_force_leaves_a_product_the_migration_made(): void {
+		$this->step( array( self::record( 1 ) ) )->run();
+		$product = $this->map->for_record( 1 )[0];
+		$this->affibloom->products[ $product ]['fields']['new_tab'] = false;
+
+		self::assertSame( Action::Unchanged, $this->step( array( self::record( 1 ) ) )->run( true, true )[0]->action );
+		self::assertFalse( $this->affibloom->products[ $product ]['fields']['new_tab'] );
+	}
+
 	public function test_a_value_affibloom_refuses_is_an_error_line_and_the_rest_continue(): void {
 		$this->affibloom->refuse_url = 'https://bad.example/';
 		$lines                       = $this->step( array( self::record( 1, 'publish', array( 'lasso_final_url' => 'https://bad.example/' ) ), self::record( 2 ) ) )->run();

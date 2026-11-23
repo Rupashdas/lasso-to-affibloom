@@ -74,8 +74,9 @@ final class LassoIdMap implements MigratedProducts {
 			wp_slash(
 				(string) wp_json_encode(
 					array(
-						'given'  => $mark->given,
-						'stored' => $mark->stored,
+						'given'   => $mark->given,
+						'stored'  => $mark->stored,
+						'adopted' => $mark->adopted,
 					)
 				)
 			)
@@ -92,8 +93,35 @@ final class LassoIdMap implements MigratedProducts {
 	 */
 	public function mark( int $product ): ?MigrationMark {
 		$stored = json_decode( (string) get_post_meta( $product, self::MARK_KEY, true ), true );
+		if ( ! is_array( $stored ) || ! isset( $stored['given'], $stored['stored'] ) ) {
+			return null;
+		}
+		// A mark written before Task 29A does not say whether the product was adopted: it was when the one-time import
+		// ran here and did not leave its record out (it made a product for every other record it saw).
+		$adopted = isset( $stored['adopted'] ) ? (bool) $stored['adopted'] : $this->imported( (int) get_post_meta( $product, self::META_KEY, true ) );
 
-		return is_array( $stored ) && isset( $stored['given'], $stored['stored'] ) ? new MigrationMark( (string) $stored['given'], (string) $stored['stored'] ) : null;
+		return new MigrationMark( (string) $stored['given'], (string) $stored['stored'], $adopted );
+	}
+
+	/**
+	 * Whether the one-time import of 2026-11-13 (deviation 87) made the product for a Lasso record: it ran on this site
+	 * (its record, the option `affibloom_lasso_import`, is the migrator's key: deviation 146) and did not leave the record
+	 * out ("<id>: <name>" in its `skipped`).
+	 *
+	 * @param int $lasso_id The record.
+	 */
+	private function imported( int $lasso_id ): bool {
+		$import = get_option( 'affibloom_lasso_import' );
+		if ( $lasso_id <= 0 || ! is_array( $import ) ) {
+			return false;
+		}
+		foreach ( (array) ( $import['skipped'] ?? array() ) as $line ) {
+			if ( str_starts_with( (string) $line, $lasso_id . ':' ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**

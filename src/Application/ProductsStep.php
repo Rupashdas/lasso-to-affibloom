@@ -37,6 +37,9 @@ final class ProductsStep implements RunStep {
 	/** R6: how far a retired record's pointer is followed. */
 	private const MAX_HOPS = 50;
 
+	/** The fields Affibloom keeps fresh from Amazon itself, which a forced restore leaves (Task 29A). */
+	private const KEPT_FRESH = array( 'price', 'show_price' );
+
 	/**
 	 * Builds the step.
 	 *
@@ -144,7 +147,7 @@ final class ProductsStep implements RunStep {
 	 * @param array<int, LassoRecord> $records Every record by ID, for a retired one's target.
 	 * @param bool                    $update  With --update.
 	 * @param bool                    $force   With --force.
-	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}
+	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int, write?: array<string, mixed>}
 	 */
 	private function decide( LassoRecord $record, int $product, array $records, bool $update, bool $force ): array {
 		$fields = $this->mapper->fields( $record );
@@ -186,10 +189,22 @@ final class ProductsStep implements RunStep {
 	 * @param int                  $product Its product.
 	 * @param array<string, mixed> $fields  The record's fields now.
 	 * @param bool                 $force   With --force.
-	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}
+	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int, write?: array<string, mixed>}
 	 */
 	private function refresh( LassoRecord $record, int $product, array $fields, bool $force ): array {
 		$mark = $this->migrated->mark( $product );
+		// An adopted product kept the one-time import's values (D7); --force gives it Lasso's where they differ, the
+		// Amazon price Affibloom keeps fresh aside (Task 29A, deviation 161). Done once: its mark then says it is not adopted.
+		if ( $force && null !== $mark && $mark->adopted ) {
+			$current = $this->writer->fields( $product );
+			$lasso   = null === $current ? array() : MigrationMark::differing( $fields, $current, self::KEPT_FRESH );
+			if ( array() !== $lasso ) {
+				$decision          = $this->decision( $record, Action::Update, $fields, "adopted from the one-time import: Lasso's values taken (--force): " . implode( ', ', array_keys( $lasso ) ), '#' . $product, $product );
+				$decision['write'] = $lasso;
+
+				return $decision;
+			}
+		}
 		if ( null === $mark || MigrationMark::hash( $fields ) === $mark->given ) {
 			// Unmarked: the one-time import's product, adopted as it is by the run.
 			return $this->decision( $record, Action::Unchanged, $fields, '', '#' . $product, $product );
@@ -210,7 +225,7 @@ final class ProductsStep implements RunStep {
 	/**
 	 * Carries out a decision and says what was done.
 	 *
-	 * @param array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int} $decision The decision.
+	 * @param array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int, write?: array<string, mixed>} $decision The decision.
 	 */
 	private function apply( array $decision ): MigrationLine {
 		$record = $decision['record'];
@@ -219,15 +234,16 @@ final class ProductsStep implements RunStep {
 		if ( Action::Unchanged === $line->action ) {
 			// The one-time import's product (D7): adopted, so a later --update can tell an edit from a Lasso change.
 			if ( null !== $fields && null === $this->migrated->mark( $decision['product'] ) ) {
-				$this->mark( $decision['product'], $record->id, $fields );
+				$this->mark( $decision['product'], $record->id, $fields, true );
 				return $this->line( $record, Action::Unchanged, $line->target, 'adopted from the one-time import' );
 			}
 			return $line;
 		}
 		if ( Action::Update === $line->action && null !== $fields ) {
 			try {
-				$this->writer->update( $decision['product'], $fields );
-				$this->mark( $decision['product'], $record->id, $fields );
+				$this->writer->update( $decision['product'], $decision['write'] ?? $fields );
+				// A restored product carries Lasso's values now, so it is no longer the import's; otherwise the flag stays.
+				$this->mark( $decision['product'], $record->id, $fields, ! isset( $decision['write'] ) && ( $this->migrated->mark( $decision['product'] )->adopted ?? false ) );
 			} catch ( InvalidArgumentException $refused ) {
 				return $this->line( $record, Action::Error, $line->target, $refused->getMessage() );
 			}
@@ -263,9 +279,10 @@ final class ProductsStep implements RunStep {
 	 * @param int                  $product  The product.
 	 * @param int                  $lasso_id Its record.
 	 * @param array<string, mixed> $fields   What the record's fields are.
+	 * @param bool                 $adopted  Whether the product was adopted from the one-time import.
 	 */
-	private function mark( int $product, int $lasso_id, array $fields ): void {
-		$this->migrated->link( $product, $lasso_id, new MigrationMark( MigrationMark::hash( $fields ), MigrationMark::hash( $this->writer->fields( $product ) ?? array() ) ) );
+	private function mark( int $product, int $lasso_id, array $fields, bool $adopted = false ): void {
+		$this->migrated->link( $product, $lasso_id, new MigrationMark( MigrationMark::hash( $fields ), MigrationMark::hash( $this->writer->fields( $product ) ?? array() ), $adopted ) );
 	}
 
 	/**
@@ -299,7 +316,7 @@ final class ProductsStep implements RunStep {
 	 * @param string                    $target  What it becomes or points at.
 	 * @param int                       $product Its product, when it has one.
 	 * @param int                       $to      A retired record's target record.
-	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int}
+	 * @return array{record: LassoRecord, line: MigrationLine, fields: array<string, mixed>|null, product: int, target: int, write?: array<string, mixed>}
 	 */
 	private function decision( LassoRecord $record, Action $action, ?array $fields, string $note, string $target = '', int $product = 0, int $to = 0 ): array {
 		return array(
