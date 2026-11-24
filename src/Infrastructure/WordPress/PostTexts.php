@@ -201,6 +201,13 @@ final class PostTexts implements TextStore {
 	 * @param string $content The content.
 	 */
 	private function save( int $post, string $content ): bool {
+		$was  = get_post( $post );
+		$keep = $was instanceof \WP_Post
+			? static fn ( array $data, array $postarr ): array => self::keep_modified( $data, $postarr, $post, (string) $was->post_modified, (string) $was->post_modified_gmt )
+			: null;
+		if ( null !== $keep ) {
+			add_filter( 'wp_insert_post_data', $keep, PHP_INT_MAX, 2 );
+		}
 		$filtered = false !== has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $filtered ) {
 			kses_remove_filters();
@@ -215,8 +222,33 @@ final class PostTexts implements TextStore {
 		if ( $filtered ) {
 			kses_init_filters();
 		}
+		if ( null !== $keep ) {
+			remove_filter( 'wp_insert_post_data', $keep, PHP_INT_MAX );
+		}
 		clean_post_cache( $post );
 
 		return ! is_wp_error( $saved ) && $this->content( $post ) === $content;
+	}
+
+	/**
+	 * The row wp_update_post() stores for the post being written, with its last modified date kept: Lasso's boxes
+	 * changing hands is no editorial update, and the theme prints the date as "Updated on" (the staging rehearsal,
+	 * 2026-11-24, finding S2). Any other row, as the revision WordPress keeps, is left as it is.
+	 *
+	 * @param array<string, mixed> $data         The row about to be stored.
+	 * @param array<string, mixed> $postarr      What was passed to wp_insert_post().
+	 * @param int                  $post         The post being written.
+	 * @param string               $modified     Its post_modified before the write.
+	 * @param string               $modified_gmt Its post_modified_gmt before the write.
+	 * @return array<string, mixed>
+	 */
+	public static function keep_modified( array $data, array $postarr, int $post, string $modified, string $modified_gmt ): array {
+		if ( (int) ( $postarr['ID'] ?? 0 ) !== $post || '' === $modified ) {
+			return $data;
+		}
+		$data['post_modified']     = $modified;
+		$data['post_modified_gmt'] = $modified_gmt;
+
+		return $data;
 	}
 }
