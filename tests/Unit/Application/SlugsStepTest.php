@@ -24,7 +24,7 @@ use InvalidArgumentException;
  */
 final class SlugsStepTest extends TestCase {
 
-	/** Affibloom's addresses by product. @var array<int, array{slug: string, old_slugs: list<string>, cloak: bool}> */
+	/** Affibloom's addresses by product. @var array<int, array{slug: string, old_slugs: list<string>, cloak: bool, retired?: bool}> */
 	public array $addresses = array();
 
 	private FakeLog $log;
@@ -84,7 +84,7 @@ final class SlugsStepTest extends TestCase {
 					'slug'      => $slug,
 					'old_slugs' => $old_slugs,
 					'cloak'     => $cloak,
-				);
+				) + array_intersect_key( $this->addresses[ $product ] ?? array(), array( 'retired' => true ) );
 			}
 		};
 		$slugs     = array(
@@ -158,6 +158,54 @@ final class SlugsStepTest extends TestCase {
 
 		self::assertSame( 'ball', $this->addresses[102]['slug'], 'Product 102 keeps the slug record 15 cannot take.' );
 		self::assertStringStartsWith( 'skip', $lines['15'] );
+	}
+
+	/**
+	 * The cutover rehearsal's F2: two records share a title, so on a migration from zero their products took each
+	 * other's slugs; the deleted record's product is retired. The live record takes its Lasso address back from the
+	 * retired product, which then takes its own record's, and stays retired.
+	 */
+	public function test_a_live_record_takes_its_address_back_from_a_retired_product_and_the_retired_one_takes_its_own(): void {
+		$this->addresses[200] = array(
+			'slug'      => 'neo-jump',
+			'old_slugs' => array(),
+			'cloak'     => true,
+		);
+		$this->addresses[201] = array(
+			'slug'      => 'neo-jump-2',
+			'old_slugs' => array(),
+			'cloak'     => true,
+			'retired'   => true,
+		);
+		$this->map->link( 200, 21, new MigrationMark( '', '' ) );
+		$this->map->link( 201, 20, new MigrationMark( '', '' ) );
+
+		// The deleted record comes first, as Lasso lists them, so the retired product waits for the live one.
+		$lines = self::actions( $this->step( array( new LassoAddress( 20, 'neo-jump', 'lasso_delete', true ), new LassoAddress( 21, 'neo-jump-2', 'publish', true ) ) )->run() );
+
+		self::assertSame( 'neo-jump-2', $this->addresses[200]['slug'], 'The live record answers at its Lasso address.' );
+		self::assertSame( 'neo-jump', $this->addresses[201]['slug'], "The retired product takes its own record's." );
+		self::assertTrue( $this->addresses[201]['retired'] );
+		self::assertStringStartsWith( 'update', $lines['21'] );
+		self::assertStringStartsWith( 'update', $lines['20'] );
+		self::assertSame( array( 10, 11, 12, 13, 20, 21, 'prefix' ), array_keys( $lines ), "The lines keep Lasso's order." );
+	}
+
+	/** A retired product whose own Lasso address another product holds keeps where it is: a skip, not an error. */
+	public function test_a_retired_product_leaves_an_address_another_product_holds(): void {
+		$this->addresses[201] = array(
+			'slug'      => 'old-ball',
+			'old_slugs' => array(),
+			'cloak'     => true,
+			'retired'   => true,
+		);
+		$this->map->link( 201, 20, new MigrationMark( '', '' ) );
+
+		$lines = self::actions( $this->step( array( new LassoAddress( 20, 'ball', 'lasso_delete', true ) ) )->run() );
+
+		self::assertSame( 'old-ball', $this->addresses[201]['slug'] );
+		self::assertSame( 'ball', $this->addresses[102]['slug'] );
+		self::assertSame( 'skip | its address stays with product 102', $lines['20'] );
 	}
 
 	public function test_an_address_changed_in_affibloom_is_kept_on_a_later_run_unless_update_and_the_dry_run_writes_nothing(): void {

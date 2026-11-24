@@ -24,7 +24,9 @@ use InvalidArgumentException;
  * posts keep answering. Lasso's slug becomes the product's slug, the one Affibloom gave it stays as an old slug (it
  * answers too), Lasso's old slugs are added and its cloaking switch is copied; with 26C's rule, a later run changes
  * an address Affibloom holds otherwise only with --update. A slug another product answers at is a collision: an error
- * line, nothing changed. The prefix and its restriction are settings (26C).
+ * line, nothing changed. A retired product's address still answers, so it moves too (the cutover rehearsal's F2): it
+ * gives up a live record's address, and takes its own record's after the live records have theirs, or, when another
+ * product holds that, stays where it is. The prefix and its restriction are settings (26C).
  */
 final class SlugsStep implements RunStep {
 
@@ -41,7 +43,7 @@ final class SlugsStep implements RunStep {
 	/**
 	 * The addresses of the products released in this run, by product.
 	 *
-	 * @var array<int, array{slug: string, old_slugs: list<string>, cloak: bool}>
+	 * @var array<int, array{slug: string, old_slugs: list<string>, cloak: bool, retired?: bool}>
 	 */
 	private array $released = array();
 
@@ -107,15 +109,35 @@ final class SlugsStep implements RunStep {
 			$this->release( $addresses );
 		}
 
-		$lines = array();
-		foreach ( $all as $lasso ) {
-			$lines[] = 'trash' === $lasso->status
-				? new MigrationLine( Family::Slugs, (string) $lasso->id, $lasso->slug, 'address', $lasso->status, Action::Skip, '', "in Lasso's trash: its address does not answer there either" )
-				: $this->line_for( $lasso, $first, $update, $write );
+		$lines   = array();
+		$retired = array();
+		foreach ( $all as $index => $lasso ) {
+			if ( 'trash' === $lasso->status ) {
+				$lines[ $index ] = new MigrationLine( Family::Slugs, (string) $lasso->id, $lasso->slug, 'address', $lasso->status, Action::Skip, '', "in Lasso's trash: its address does not answer there either" );
+			} elseif ( $this->retired( $lasso ) ) {
+				$retired[ $index ] = $lasso; // After the live records, whose addresses come first.
+			} else {
+				$lines[ $index ] = $this->line_for( $lasso, $first, $update, $write );
+			}
 		}
+		foreach ( $retired as $index => $lasso ) {
+			$lines[ $index ] = $this->line_for( $lasso, $first, $update, $write );
+		}
+		ksort( $lines );
 		$lines[] = new MigrationLine( Family::Slugs, 'prefix', '', 'note', '', Action::Skip, '', 'rewrite_slug and restrict_prefix are settings: the settings family moves them' );
 
-		return $lines;
+		return array_values( $lines );
+	}
+
+	/**
+	 * Whether a record's product is retired in Affibloom.
+	 *
+	 * @param LassoAddress $lasso The record's address.
+	 */
+	private function retired( LassoAddress $lasso ): bool {
+		$product = $this->migrated->for_record( $lasso->id )[0] ?? 0;
+
+		return 0 !== $product && true === ( $this->writer->address( $product )['retired'] ?? false );
 	}
 
 	/**
@@ -160,7 +182,7 @@ final class SlugsStep implements RunStep {
 		}
 		$has = $this->writer->address( $product );
 		if ( null === $has ) {
-			return $line( Action::Skip, "its product is in Affibloom's trash, retired or deleted: its address stays as it is", $product );
+			return $line( Action::Skip, "its product is in Affibloom's trash or deleted: its address stays as it is", $product );
 		}
 
 		// Lasso's old slugs another product answers at stay with it.
@@ -186,6 +208,10 @@ final class SlugsStep implements RunStep {
 		$holder = $this->writer->holder( $lasso->slug );
 		if ( 0 !== $holder && $holder !== $product ) {
 			$borrowed = ! $write && ( $this->writer->address( $holder )['slug'] ?? '' ) === $lasso->slug;
+			// A retired product does not take an address another product holds: it stays where it is.
+			if ( ! $borrowed && ! $temp && true === ( $has['retired'] ?? false ) ) {
+				return $line( Action::Skip, 'its address stays with product ' . $holder, $product );
+			}
 			if ( ! $borrowed ) {
 				return $this->restored( $product, $line( Action::Error, 'collision: product ' . $holder . ' answers at ' . $lasso->slug, $product ) );
 			}

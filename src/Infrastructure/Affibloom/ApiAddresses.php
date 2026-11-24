@@ -28,7 +28,7 @@ final class ApiAddresses implements AddressWriter {
 	 * A product's address, or null.
 	 *
 	 * @param int $product The product.
-	 * @return array{slug: string, old_slugs: list<string>, cloak: bool}|null
+	 * @return array{slug: string, old_slugs: list<string>, cloak: bool, retired?: bool}|null
 	 */
 	public function address( int $product ): ?array {
 		return $this->api->product_address( $product );

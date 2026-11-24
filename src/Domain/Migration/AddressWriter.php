@@ -17,10 +17,11 @@ use InvalidArgumentException;
 interface AddressWriter {
 
 	/**
-	 * A product's address, or null when there is no such product.
+	 * A published or retired product's address, `retired` saying which (a retired product's address still answers;
+	 * an Affibloom older than 2026-11-24 gives none for it and no `retired`), or null when there is no such product.
 	 *
 	 * @param int $product The product.
-	 * @return array{slug: string, old_slugs: list<string>, cloak: bool}|null
+	 * @return array{slug: string, old_slugs: list<string>, cloak: bool, retired?: bool}|null
 	 */
 	public function address( int $product ): ?array;
 
