@@ -23,12 +23,17 @@ use InvalidArgumentException;
  * (Lasso's and Affibloom's IDs are the same) keeps a name changed in Lasso; a custom field becomes a new one, its new ID
  * kept in the log's field map, so a second run finds it. A product's rows take Lasso's values, order, "visible" and
  * "show field name"; with 26C's rule, a product whose rows Affibloom already has is unchanged, and a later run keeps
- * Affibloom's differing rows unless --update. A product not published in Affibloom is left as it is.
+ * Affibloom's differing rows unless --update, for the products the family gave rows to (the log's list): one it never
+ * gave any, a record Lasso added later, gets Lasso's (the cutover rehearsal's F3). A site the family migrated before
+ * it kept the list keeps the old rule. A product not published in Affibloom is left as it is.
  */
 final class FieldsStep implements RunStep {
 
 	/** The log's field map: Lasso field ID → Affibloom field ID. */
 	public const MAP = 'field_map';
+
+	/** The log's list of the products the family gave rows to: Lasso record ID → product ID; 0 → 0 says it is kept. */
+	public const GIVEN = 'field_values';
 
 	/** Lasso's and Affibloom's Primary Rating, which Affibloom always shows first. */
 	private const RATING = 1;
@@ -84,7 +89,13 @@ final class FieldsStep implements RunStep {
 		$first   = ! $this->log->has_run( Family::Fields );
 		$map     = $this->log->map( self::MAP );
 		$current = array_column( $this->writer->definitions(), null, 'id' );
-		$lines   = array();
+		$given   = $this->log->map( self::GIVEN );
+		// A site the family migrated before it kept the list: every product counts as given.
+		$legacy = ! $first && ! isset( $given[0] );
+		if ( $write ) {
+			$this->log->remember( self::GIVEN, 0, 0 );
+		}
+		$lines = array();
 
 		foreach ( $fields->definitions as $definition ) {
 			$id   = $definition['id'];
@@ -118,19 +129,26 @@ final class FieldsStep implements RunStep {
 				$lines[] = $line( Action::Skip, 'no product yet: migrate the products first' );
 				continue;
 			}
-			$given = array();
+			$lasso = array();
 			foreach ( $rows as $row ) {
-				$given[] = array( 'field' => $map[ $row['field'] ] ?? $row['field'] ) + $row;
+				$lasso[] = array( 'field' => $map[ $row['field'] ] ?? $row['field'] ) + $row;
 			}
 			$has = $this->writer->rows( $product );
 			if ( null === $has ) {
 				$lines[] = $line( Action::Skip, 'its product is not published in Affibloom: left as it is' );
 				continue;
 			}
-			if ( self::same( $given, $has ) ) {
+			if ( self::same( $lasso, $has ) ) {
 				$lines[] = $line( Action::Unchanged );
-			} elseif ( $first || $update ) {
-				$lines[] = $this->apply( $write, fn () => $this->writer->set_rows( $product, $given ), $line( Action::Create ) );
+			} elseif ( $first || $update || ! ( $legacy || isset( $given[ $lasso_id ] ) ) ) {
+				$lines[] = $this->apply(
+					$write,
+					function () use ( $product, $lasso, $lasso_id ): void {
+						$this->writer->set_rows( $product, $lasso );
+						$this->log->remember( self::GIVEN, $lasso_id, $product );
+					},
+					$line( Action::Create )
+				);
 			} else {
 				$lines[] = $line( Action::Skip, "Affibloom's field values differ: kept (--update takes Lasso's)" );
 			}

@@ -13,7 +13,8 @@ use InvalidArgumentException;
 
 /**
  * A family of Lasso's data, migrated as one step (F10 D3), in the fixed order the migration runs them: settings first,
- * field definitions before the products whose values need them, the products before everything that points at them.
+ * the products before everything that points at them, their field values included (the cutover rehearsal's F3: on a
+ * site without products the values found none).
  * Clicks are not a family (decision E1: start from zero). Lasso's original links come last: they need Affibloom's link
  * index (Task 26Q).
  */
@@ -21,8 +22,8 @@ enum Family: string {
 
 	case Settings      = 'settings';
 	case Display       = 'display';
-	case Fields        = 'fields';
 	case Products      = 'products';
+	case Fields        = 'fields';
 	case Groups        = 'groups';
 	case Slugs         = 'slugs';
 	case Variants      = 'variants';

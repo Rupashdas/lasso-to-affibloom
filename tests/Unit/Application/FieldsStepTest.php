@@ -117,6 +117,37 @@ final class FieldsStepTest extends TestCase {
 		self::assertSame( '4.5', $this->affibloom->rows[40][0]['value'] );
 	}
 
+	/** Rehearsal F3: the products exist when their values come, so one run is complete. */
+	public function test_the_products_are_migrated_before_their_field_values(): void {
+		$order = Family::cases();
+
+		self::assertLessThan( array_search( Family::Fields, $order, true ), array_search( Family::Products, $order, true ) );
+		self::assertLessThan( array_search( Family::Tables, $order, true ), array_search( Family::Fields, $order, true ), 'Tables read the field map.' );
+	}
+
+	/**
+	 * Rehearsal F3: a product the family never gave values to (it did not exist yet, or Lasso added the record later)
+	 * gets Lasso's on a later run; only rows the family gave and Affibloom changed are kept.
+	 */
+	public function test_a_product_the_family_never_gave_values_gets_them_on_a_later_run(): void {
+		unset( $this->map->map[9701] );
+		self::assertSame( 'skip', self::actions( $this->step()->run() )['values:9701'] );
+		$this->log->ran( Family::Fields, 1, 0 );
+		$this->map->map[9701] = array( 40 );
+
+		self::assertSame( 'create', self::actions( $this->step()->run() )['values:9701'] );
+		self::assertSame( '4.5', $this->affibloom->rows[40][0]['value'] );
+	}
+
+	/** A site the family migrated before it kept its list: a later run keeps differing rows, as it did. */
+	public function test_without_the_list_a_later_run_keeps_differing_rows_as_before(): void {
+		$this->log->ran( Family::Fields, 1, 0 );
+		$this->log->remember( FieldsStep::MAP, 99995, 99995 );
+
+		self::assertSame( 'skip', self::actions( $this->step()->run() )['values:9701'] );
+		self::assertSame( array(), $this->affibloom->rows[40] );
+	}
+
 	public function test_the_dry_run_writes_nothing(): void {
 		$this->step()->plan();
 
