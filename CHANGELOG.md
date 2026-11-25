@@ -4,6 +4,10 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
+The build for the live cutover (Task 41), beside Affibloom 1.0.0-rc.2.
+
 ### Changed
 
 - The settings family no longer carries Lasso's Commission Upgrades (`auto_upgrade_eligible_links`), Mobile Deep Linking and Send Readers to Their Local Store (`international_click`): Affibloom removed them, as they worked only through Lasso's cloud; the dry run lists them as left with that reason (2026-11-25).
@@ -12,6 +16,10 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 ### Removed
 
 - `WaitingStep` and the "Comes with Task …" card state: every family has its own step.
+
+## [0.1.0] - 2026-11-24
+
+The build staging ran (Task 40, `04ecf8d`).
 
 ### Added
 
