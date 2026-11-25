@@ -3,7 +3,6 @@ namespace AffibloomLassoMigrator\Tests\Unit\Application;
 
 use AffibloomLassoMigrator\Application\LeftBehind;
 use AffibloomLassoMigrator\Application\MigrationService;
-use AffibloomLassoMigrator\Application\WaitingStep;
 use AffibloomLassoMigrator\Domain\Lasso\LassoFields;
 use AffibloomLassoMigrator\Domain\Lasso\LassoInventory;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
@@ -101,21 +100,5 @@ final class LeftBehindTest extends TestCase {
 
 		self::assertNotSame( array(), $service->plan( Family::cases() )->data );
 		self::assertSame( array(), $service->plan( array( Family::Products ) )->data );
-	}
-
-	public function test_a_waiting_family_counts_its_tables_and_names_its_task(): void {
-		$data   = new LeftBehind(
-			self::source(
-				array(
-					'lasso_category_order' => 0,
-					'lasso_content'        => 444,
-				),
-				array( LassoInventory::GROUPS => 1 )
-			)
-		);
-		$report = ( new MigrationService( array( new WaitingStep( Family::Groups, $data, '26F' ) ) ) )->plan( array( Family::Groups ) );
-
-		self::assertSame( Action::Waiting, $report->lines[0]->action );
-		self::assertSame( 'groups: found lasso_category_order 0, lasso-cat terms 1; moved by Task 26F.', MigrateCommand::summary( $report, Family::Groups ) );
 	}
 }

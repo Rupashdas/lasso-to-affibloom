@@ -180,23 +180,15 @@ final class MigrationScreen {
 	}
 
 	/**
-	 * One family's card: its numbers, or what it found while its task is to come, and its error lines.
+	 * One family's card: its numbers and its error lines.
 	 *
 	 * @param MigrationReport $report The report.
 	 * @param Family          $family The family.
-	 * @return array{family: Family, waiting: string, stats: list<array{0: string, 1: int, 2: bool}>, errors: list<MigrationLine>}
+	 * @return array{family: Family, stats: list<array{0: string, 1: int, 2: bool}>, errors: list<MigrationLine>}
 	 */
 	private function card( MigrationReport $report, Family $family ): array {
-		$lines   = $report->lines_of( $family );
-		$waiting = $report->count( $family, Action::Waiting ) > 0 ? $lines[0]->target : '';
-		$stats   = array();
-		if ( '' !== $waiting ) {
-			foreach ( $report->data as $item ) {
-				if ( $item->family === $family ) {
-					$stats[] = array( $item->name, $item->rows, false );
-				}
-			}
-		} elseif ( Family::Products === $family ) {
+		$lines = $report->lines_of( $family );
+		if ( Family::Products === $family ) {
 			$stats = array(
 				array( __( 'Records', 'affibloom-lasso-migrator' ), count( $lines ), true ),
 				array( __( 'To create', 'affibloom-lasso-migrator' ), $report->count( $family, Action::Create ), false ),
@@ -214,10 +206,9 @@ final class MigrationScreen {
 		}
 
 		return array(
-			'family'  => $family,
-			'waiting' => $waiting,
-			'stats'   => $stats,
-			'errors'  => array_values( array_filter( $lines, static fn ( MigrationLine $line ): bool => Action::Error === $line->action ) ),
+			'family' => $family,
+			'stats'  => $stats,
+			'errors' => array_values( array_filter( $lines, static fn ( MigrationLine $line ): bool => Action::Error === $line->action ) ),
 		);
 	}
 

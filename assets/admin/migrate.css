@@ -118,7 +118,6 @@
 .affibloom-migrate__state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .affibloom-migrate__state--ready { background: var(--affibloom-success-50); color: var(--affibloom-success-700); }
 .affibloom-migrate__state--errors { background: var(--affibloom-danger-50); color: var(--affibloom-danger-700); }
-.affibloom-migrate__state--waiting { background: var(--affibloom-warning-50); color: var(--affibloom-warning-700); }
 
 /* Lasso's data: three columns that fit a phone; long names wrap. */
 .affibloom-migrate__table-wrap { position: relative; overflow-x: auto; margin-top: 12px; }

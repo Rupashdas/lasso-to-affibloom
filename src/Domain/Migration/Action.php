@@ -32,9 +32,6 @@ enum Action: string {
 	/** In Lasso's trash: a product in the trash (D5). */
 	case Trash = 'trash';
 
-	/** Its family's migration task is not built yet: counted only (Task 25C). */
-	case Waiting = 'waiting';
-
 	/** Affibloom refuses a value: reported, the rest continues (D19). */
 	case Error = 'error';
 }

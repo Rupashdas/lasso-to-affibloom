@@ -158,10 +158,6 @@ final class MigrateCommand {
 				$report->count( $family, Action::Error )
 			);
 		}
-		if ( $report->count( $family, Action::Waiting ) > 0 ) {
-			$line = $report->lines_of( $family )[0];
-			return sprintf( '%s: %s; moved by %s.', $family->value, $line->note, $line->target );
-		}
 		if ( Family::Products !== $family ) {
 			return sprintf(
 				$report->dry_run ? '%s: %d items: %d to create, %d to update, %d unchanged, %d skipped, %d errors.' : '%s: %d items: %d created, %d updated, %d unchanged, %d skipped, %d errors.',

@@ -95,6 +95,22 @@ final class SettingsMapperTest extends TestCase {
 		self::assertStringContainsString( "the site's own tracking ID", $lines['lasso_amazon_tracking_id_blacklist']->note );
 	}
 
+	public function test_lasso_s_three_cloud_switches_are_left_and_never_written(): void {
+		$stored = array(
+			'auto_upgrade_eligible_links' => true,
+			'amazon_mobile_deep_linking'  => true,
+			'international_click'         => false,
+		);
+		$lines  = self::lines( $stored );
+
+		foreach ( array_keys( $stored ) as $key ) {
+			self::assertSame( Action::Skip, $lines[ $key ]->action, $key );
+			self::assertSame( '', $lines[ $key ]->target, $key );
+			self::assertStringContainsString( "Lasso's cloud", $lines[ $key ]->note, $key );
+		}
+		self::assertSame( array( SettingsMapper::BLACKLIST ), array_keys( ( new SettingsMapper() )->targets( new LassoSettings( $stored ) ) ) );
+	}
+
 	public function test_show_disclosure_list_follows_show_disclosure_when_never_stored(): void {
 		self::assertFalse( ( new LassoSettings( array( 'show_disclosure' => false ) ) )->bool( 'show_disclosure_list' ) );
 		self::assertTrue(

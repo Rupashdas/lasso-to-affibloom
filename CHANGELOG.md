@@ -4,6 +4,15 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 
 ## [Unreleased]
 
+### Changed
+
+- The settings family no longer carries Lasso's Commission Upgrades (`auto_upgrade_eligible_links`), Mobile Deep Linking and Send Readers to Their Local Store (`international_click`): Affibloom removed them, as they worked only through Lasso's cloud; the dry run lists them as left with that reason (2026-11-25).
+- Nor Lasso's Performance Mode, Restrict Prefix, Disable AAWP Description, the two notification switches, `show_disclosure_list` and Force changes from link details, which Affibloom removed (`show_disclosure_table` and the CPU level are still carried).
+
+### Removed
+
+- `WaitingStep` and the "Comes with Task …" card state: every family has its own step.
+
 ### Added
 
 - The plugin, beside Affibloom 1.0.0-rc.1 or later through Affibloom's extension API (`affibloom_ready`).

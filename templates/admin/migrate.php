@@ -6,7 +6,7 @@
  * assets/admin/migrate.css adds the grid, the numbers and the verdict pills.
  *
  * @package AffibloomLassoMigrator
- * @var array{lasso_version: string, records: int, download: string, cards: list<array{family: \AffibloomLassoMigrator\Domain\Migration\Family, waiting: string, stats: list<array{0: string, 1: int, 2: bool}>, errors: list<\AffibloomLassoMigrator\Domain\Migration\MigrationLine>}>, data: list<\AffibloomLassoMigrator\Domain\Migration\DataItem>, left: list<\AffibloomLassoMigrator\Domain\Migration\DataItem>} $view
+ * @var array{lasso_version: string, records: int, download: string, cards: list<array{family: \AffibloomLassoMigrator\Domain\Migration\Family, stats: list<array{0: string, 1: int, 2: bool}>, errors: list<\AffibloomLassoMigrator\Domain\Migration\MigrationLine>}>, data: list<\AffibloomLassoMigrator\Domain\Migration\DataItem>, left: list<\AffibloomLassoMigrator\Domain\Migration\DataItem>} $view
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -92,12 +92,10 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 		<?php foreach ( $view['cards'] as $card ) : ?>
 			<?php
 			$has_errors = array() !== $card['errors'];
-			$state      = $has_errors ? 'errors' : ( '' === $card['waiting'] ? 'ready' : 'waiting' );
+			$state      = $has_errors ? 'errors' : 'ready';
 			$state_text = array(
-				'errors'  => __( 'Needs a look', 'affibloom-lasso-migrator' ),
-				'ready'   => __( 'Ready', 'affibloom-lasso-migrator' ),
-				/* translators: %s: the task that will move this family, such as "Task 26F". */
-				'waiting' => sprintf( __( 'Comes with %s', 'affibloom-lasso-migrator' ), $card['waiting'] ),
+				'errors' => __( 'Needs a look', 'affibloom-lasso-migrator' ),
+				'ready'  => __( 'Ready', 'affibloom-lasso-migrator' ),
 			);
 			?>
 			<section class="affibloom-card affibloom-migrate__family" aria-labelledby="affibloom-migrate-<?php echo esc_attr( $card['family']->value ); ?>">
@@ -105,9 +103,6 @@ $left_rows    = array_sum( array_map( static fn ( $item ): int => $item->rows, $
 					<h2 class="affibloom-card__title" id="affibloom-migrate-<?php echo esc_attr( $card['family']->value ); ?>"><?php echo esc_html( $family_names[ $card['family']->value ] ?? $card['family']->value ); ?></h2>
 					<span class="affibloom-migrate__state affibloom-migrate__state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $state_text[ $state ] ); ?></span>
 				</div>
-				<?php if ( '' !== $card['waiting'] ) : ?>
-					<p class="affibloom-migrate__found"><?php esc_html_e( 'Found on this site:', 'affibloom-lasso-migrator' ); ?></p>
-				<?php endif; ?>
 				<dl class="affibloom-migrate__stats">
 					<?php foreach ( $card['stats'] as $stat ) : ?>
 						<div class="affibloom-migrate__stat<?php echo $stat[2] ? ' affibloom-migrate__stat--total' : ''; ?><?php echo 0 === $stat[1] ? ' affibloom-migrate__stat--zero' : ''; ?>">
