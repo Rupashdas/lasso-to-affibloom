@@ -17,6 +17,10 @@ The build for the live cutover (Task 41), beside Affibloom 1.0.0-rc.2.
 
 - `WaitingStep` and the "Comes with Task …" card state: every family has its own step.
 
+### Fixed
+
+- The settings summary counted the two removed notification switches as "kept" (Affibloom's value kept) instead of "left"; the migration itself was right (the cutover rehearsal of 2026-11-26).
+
 ## [0.1.0] - 2026-11-24
 
 The build staging ran (Task 40, `04ecf8d`).

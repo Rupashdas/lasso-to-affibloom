@@ -2,11 +2,15 @@
 namespace AffibloomLassoMigrator\Tests\Unit\Application;
 
 use AffibloomLassoMigrator\Application\DisplayMapper;
+use AffibloomLassoMigrator\Application\MigrationService;
 use AffibloomLassoMigrator\Application\SettingsMapper;
+use AffibloomLassoMigrator\Application\Step;
 use AffibloomLassoMigrator\Application\ValueText;
 use AffibloomLassoMigrator\Domain\Lasso\LassoSettings;
 use AffibloomLassoMigrator\Domain\Migration\Action;
+use AffibloomLassoMigrator\Domain\Migration\Family;
 use AffibloomLassoMigrator\Domain\Migration\MigrationLine;
+use AffibloomLassoMigrator\Interface\Cli\MigrateCommand;
 use AffibloomLassoMigrator\Tests\Unit\TestCase;
 use Brain\Monkey\Functions;
 
@@ -93,6 +97,26 @@ final class SettingsMapperTest extends TestCase {
 		self::assertSame( 'permission = administrator', $lines['lasso_permission']->target );
 		self::assertStringStartsWith( 'disclosure_text = We earn a commission', $lines['disclosure_text']->target );
 		self::assertStringContainsString( "the site's own tracking ID", $lines['lasso_amazon_tracking_id_blacklist']->note );
+	}
+
+	public function test_a_key_affibloom_has_no_setting_for_is_counted_as_left_not_kept(): void {
+		$lines = array_values( self::lines( array_fill_keys( explode( ' ', self::SITE_KEYS ), '' ) ) );
+		$step  = new class( array_values( array_filter( $lines, static fn ( MigrationLine $line ): bool => Family::Settings === $line->family ) ) ) implements Step {
+			/**
+			 * @param list<MigrationLine> $lines The settings family's lines.
+			 */
+			public function __construct( private array $lines ) {}
+			public function family(): Family {
+				return Family::Settings;
+			}
+			public function plan( bool $update = false, bool $force = false ): array {
+				return $this->lines;
+			}
+		};
+
+		$report = ( new MigrationService( array( $step ) ) )->plan( array( Family::Settings ) );
+
+		self::assertStringContainsString( ' 0 kept, ', MigrateCommand::summary( $report, Family::Settings ) );
 	}
 
 	public function test_lasso_s_three_cloud_switches_are_left_and_never_written(): void {
