@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Affibloom Lasso Migrator
  * Description:       Moves this site from Lasso to Affibloom: its links, settings and content. Delete it when the move is finished.
- * Version:           0.2.0
+ * Version:           1.0.0
  * Requires at least: 7.1.4
  * Requires PHP:      8.3
  * Requires Plugins:  affibloom
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'AFFIBLOOM_LASSO_MIGRATOR_VERSION', '0.2.0' );
+define( 'AFFIBLOOM_LASSO_MIGRATOR_VERSION', '1.0.0' );
 define( 'AFFIBLOOM_LASSO_MIGRATOR_FILE', __FILE__ );
 
 /**

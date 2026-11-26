@@ -4,6 +4,10 @@ All notable changes to this plugin are recorded here. Versions follow semantic v
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-26
+
+The stable release beside Affibloom 1.0.0: 0.2.0 unchanged, as rehearsed on a copy of the live site (2026-11-26). It still runs with Affibloom 1.0.0-rc.1 or later.
+
 ## [0.2.0] - 2026-11-26
 
 The build for the live cutover (Task 41), beside Affibloom 1.0.0-rc.2.
